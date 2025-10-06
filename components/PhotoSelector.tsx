@@ -1,0 +1,112 @@
+import React, { useState } from "react";
+import {
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+  FlatList,
+} from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { Photo } from "../types/types";
+import { styles, ambrasGreen } from "../styles";
+
+interface PhotoSelectorModalProps {
+  visible: boolean;
+  photos: Photo[];
+  onClose: () => void;
+  onChange: (updatedPhotos: (String | Photo)[]) => void;
+}
+
+const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
+  visible,
+  photos = [],
+  onClose,
+  onChange,
+}) => {
+  const [localPhotos, setLocalPhotos] = useState<(String | Photo)[]>(photos);
+
+  // Adds a new photo
+  const handleAddPhoto = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      allowsMultipleSelection: true,
+    });
+
+    if (!result.canceled) {
+      const newUris = result.assets.map((a) => a.uri);
+      const updated = [...localPhotos, ...newUris];
+      setLocalPhotos(updated);    }
+  };
+
+  const handleSave = () => {
+    onChange(localPhotos);
+    onClose();
+  }
+
+  const handleDeletePhoto = (uri: string) => {
+    console.log("Deleting photo:", uri);
+    const updatedPhotos = localPhotos.filter(
+      (photo) => (typeof photo === "string" ? photo : photo.url) !== (typeof uri === "string" ? uri : uri.url)
+    );
+    setLocalPhotos(updatedPhotos);
+    console.log("Updated photos after deletion:", updatedPhotos);
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide">
+      <View style={styles.modalContainer}>
+        <View style={styles.flexRow}>
+
+        <Text style={styles.modalHeader}>Manage Photos</Text>
+        <TouchableOpacity>
+          <Text style={styles.deleteButton} onPress={handleAddPhoto}>+ Add Photo</Text>
+        </TouchableOpacity>
+        </View>
+
+        <FlatList
+          data={localPhotos}
+          keyExtractor={(item) => (typeof item === "string" ? item : item.id?.toString() || item.url)}
+          numColumns={2}
+          contentContainerStyle={{ paddingVertical: 10 }}
+          renderItem={({ item }) => {
+            const uri = typeof item === "string" ? item : item.url;
+            return (
+              <View style={styles.imageContainer}>
+                <Image source={{ uri }} style={styles.image} />
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDeletePhoto(item)}
+                >
+                  <Text style={styles.deleteButtonText}>×</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          }}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>No photos yet</Text>
+          }
+        />
+
+
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.cancelButton, { flex: 1 }]}
+            onPress={onClose}
+          >
+            <Text style={styles.buttonText}>Close</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.saveButton, { flex: 1 }]}
+            onPress={handleSave}
+          >
+            <Text style={styles.buttonText}>Save</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+export default PhotoSelectorModal;

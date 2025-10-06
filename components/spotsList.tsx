@@ -1,0 +1,96 @@
+// SpotsList.tsx
+import React from "react";
+import { View, Text, TouchableOpacity, Image, ActivityIndicator, FlatList } from "react-native";
+import { styles } from "../styles";
+import { Spot } from "../types/types";
+
+type Props = {
+  spots: Spot[];
+  loading?: boolean;
+  onApprove?: (id: number) => void;
+  onEdit?: (id: number) => void;
+};
+
+const SpotsList: React.FC<Props> = ({ spots, loading, onApprove, onEdit }) => {
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", marginTop: 20 }}>
+        <ActivityIndicator size="large" color="#006400" />
+        <Text style={{ marginTop: 10, color: "#006400", fontSize: 16 }}>Loading spots...</Text>
+      </View>
+    );
+  }
+
+  if (!spots.length && !loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", marginTop: 20 }}>
+        <Text style={{ fontSize: 16, color: "#333" }}>No spots available</Text>
+      </View>
+    );
+  }
+
+
+  return (
+    <FlatList
+      data={spots}
+      keyExtractor={(item) => item.id.toString()}
+      contentContainerStyle={{ paddingBottom: 20 }}
+      renderItem={({ item: spot }) => (
+        <View key={spot.id} style={styles.card}>
+          {spot.photos && spot.photos.length > 0 && (
+            <Image
+              source={{ uri: spot.photos[0].url }}
+              style={{ width: "100%", height: 180, borderRadius: 8, marginBottom: 8 }}
+              resizeMode="cover"
+            />
+          )}
+
+          <Text style={styles.cardTitle}>{spot.name}</Text>
+            <Text
+            style={{
+              color: spot.category ? "#555" : "red",
+              marginBottom: 4,
+            }}
+            >
+            {spot.category ?? "Needs category"}
+            </Text>
+          {spot.notes && <Text style={{ color: "#444", marginBottom: 6 }}>{spot.notes}</Text>}
+
+          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            {onEdit && (
+              <>
+                <TouchableOpacity
+                  onPress={() => onEdit(spot.id)}
+                  style={{
+                    backgroundColor: "blue",
+                    paddingVertical: 6,
+                    paddingHorizontal: 12,
+                    borderRadius: 6,
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontWeight: "600" }}>Edit</Text>
+                </TouchableOpacity>
+                {onApprove && (
+                  <TouchableOpacity
+                    onPress={() => onApprove(spot.id)}
+                    style={{
+                      backgroundColor: "#006400",
+                      paddingVertical: 6,
+                      paddingHorizontal: 12,
+                      borderRadius: 6,
+                    }}
+                  >
+                    <Text style={{ color: "#fff", fontWeight: "600" }}>Approve</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </View>
+        </View>
+      )}
+    />
+  );
+};
+
+export default SpotsList;
