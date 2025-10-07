@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "AMBRAS",
+    "slug": "ambras-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/ambras-logo.jpg",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -26,6 +26,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4a0ce4af-d9b7-49bf-967d-fae5a0101510"
+      }
     }
   }
 }

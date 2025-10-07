@@ -128,7 +128,6 @@ export const uploadPhotosToSupabase = async (formData: formDataSpot, uuid: strin
     }
 
   }
-  console.log("All uploaded photos:", uploadedPhotos);
   return uploadedPhotos;
 };
 

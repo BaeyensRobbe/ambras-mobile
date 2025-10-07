@@ -44,6 +44,21 @@ export type formDataSpot = {
   photos: (Photo | String)[];
 }
 
+export type addSpotData = {
+  name: string;
+  city: string;
+  category?: string;
+  isFavorite: boolean;
+  isCovered: boolean;
+  isPkPark: boolean;
+  hasFlipArea: boolean;
+  hasSwings: boolean;
+  lat: number;
+  lng: number;
+  photos: (Photo | String)[];
+  notes?: string;  
+}
+
 export type CompleteSpot = {
   id: number;
   name: string;

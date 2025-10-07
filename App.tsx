@@ -7,6 +7,8 @@ import DashboardScreen from "./screens/DashboardScreen";
 import CalendarScreen from "./screens/CalendarScreen";
 import PasswordScreen from "./screens/PasswordScreen";
 import SpotScreen from "./screens/SpotScreen";
+import Toast from "react-native-toast-message";
+import { toastConfig } from "./utils/toastConfig";
 
 const ambrasGreen = "#1F3B28";
 const Tab = createBottomTabNavigator();
@@ -36,6 +38,7 @@ export default function App() {
         <Tab.Screen name="Agenda" component={CalendarScreen} />
         <Tab.Screen name="Spots" component={SpotScreen} />
       </Tab.Navigator>
+      <Toast config={toastConfig} />
     </NavigationContainer>
   );
 }

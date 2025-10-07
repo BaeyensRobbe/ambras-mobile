@@ -104,16 +104,9 @@ const EditSpotModal: React.FC<EditSpotModalProps> = ({ visible, spot, onClose, o
                 <TouchableOpacity
                 key={field.key}
                 onPress={() => handleFieldPress(field.key, field.type)}
-                style={{
-                  paddingVertical: 12,
-                  borderBottomWidth: 1,
-                  borderBottomColor: "#eee",
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}>
+                style={styles.fieldContainer}>
 
-                <Text style={{ fontWeight: "600", fontSize: 16 }}>{field.label}</Text>
+                <Text style={styles.fieldLabel}>{field.label}</Text>
                 {field.type === "check" ? (
                   <View
                   style={{

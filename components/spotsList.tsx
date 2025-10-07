@@ -1,6 +1,6 @@
 // SpotsList.tsx
 import React from "react";
-import { View, Text, TouchableOpacity, Image, ActivityIndicator, FlatList } from "react-native";
+import { View, Text, TouchableOpacity, Image, ActivityIndicator, FlatList, RefreshControl } from "react-native";
 import { styles } from "../styles";
 import { Spot } from "../types/types";
 
@@ -9,9 +9,10 @@ type Props = {
   loading?: boolean;
   onApprove?: (id: number) => void;
   onEdit?: (id: number) => void;
+  onRefresh?: () => void;
 };
 
-const SpotsList: React.FC<Props> = ({ spots, loading, onApprove, onEdit }) => {
+const SpotsList: React.FC<Props> = ({ spots, loading, onApprove, onEdit, onRefresh }) => {
 
   if (loading) {
     return (
@@ -35,7 +36,8 @@ const SpotsList: React.FC<Props> = ({ spots, loading, onApprove, onEdit }) => {
     <FlatList
       data={spots}
       keyExtractor={(item) => item.id.toString()}
-      contentContainerStyle={{ paddingBottom: 20 }}
+      contentContainerStyle={{ paddingBottom: 0 }}
+      refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} />}
       renderItem={({ item: spot }) => (
         <View key={spot.id} style={styles.card}>
           {spot.photos && spot.photos.length > 0 && (

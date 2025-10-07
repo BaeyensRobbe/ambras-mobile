@@ -2,17 +2,17 @@ import {API_BASE_URL} from "@env";
 
 const BASE_URL = API_BASE_URL || "http://localhost:4000";
 
-export const fetchSpots = async () => {
-  const res = await fetch(`${BASE_URL}/spots/all`);
-  if (!res.ok) {
-    throw new Error("Failed to fetch spots");
-  }
-  return res.json();
-}
+// export const fetchSpots = async () => {
+//   const res = await fetch(`${BASE_URL}/spots/all`);
+//   if (!res.ok) {
+//     throw new Error("Failed to fetch spots");
+//   }
+//   return res.json();
+// }
 
-export const fetchSpotSuggestions = async () => {
+export const fetchSpots = async (type: string) => {
   try {
-    const url = BASE_URL.startsWith("http") ? `${BASE_URL}/spots/suggestions` : `https://${BASE_URL}/spots/suggestions`;
+    const url = BASE_URL.startsWith("http") ? `${BASE_URL}/spots/suggestions` : `https://${BASE_URL}/spots/${type}`;
     console.log("Fetching spot suggestions from:", url);
     const res = await fetch(url);
     if (!res.ok) {
@@ -20,7 +20,6 @@ export const fetchSpotSuggestions = async () => {
       throw new Error("Failed to fetch spot suggestions");
     }
     const data = await res.json();
-    console.log("Spot suggestions response:", data);
     return data;
   } catch (err) {
     console.error("Fetch error:", err);
