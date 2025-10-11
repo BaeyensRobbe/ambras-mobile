@@ -1,24 +1,28 @@
 // src/screens/SpotScreen.tsx
-import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
-import AppHeader from "../components/AppHeader";
+import React, { useEffect, useState, useMemo } from "react";
+import { View, Text, TouchableOpacity, TextInput } from "react-native";
+import Header from "../components/Header";
 import { ambrasGreen, styles } from "../styles";
 import SpotsList from "../components/spotsList";
 import { fetchSpots } from "../api/spots";
-import { formDataSpot, Photo, Spot } from "../types/types";
-import EditSpotModal from "../components/EditSpotModal";
-import { Ionicons } from '@expo/vector-icons';
+import { addSpotData, formDataSpot, Photo, Spot } from "../types/types";
+import { Ionicons } from "@expo/vector-icons";
 import {
   deletePhotosFromSupabase,
   finalizeApproval,
   saveSpot,
   uploadPhotosToSupabase,
+  addSpot,
+  insertPhotoRecords,
+  uploadPhotosToR2,
+  deletePhotosFromR2,
 } from "../utils/spotHelperFunctions";
 import uuid from "react-native-uuid";
 import ApproveSpotModal from "../components/ApproveSpotModal";
 import Toast from "react-native-toast-message";
 import { simulateProgress } from "../utils/toastHelperFunctions";
-import AddSpotModal from "../components/addSpotModal";
+import SpotModal from "../components/SpotModal";
+import DeleteSpotModal from "../components/DeleteSpotModal";
 
 const SpotScreen = () => {
   const [showSpotSuggestions, setShowSpotSuggestions] = useState(true);
@@ -28,8 +32,11 @@ const SpotScreen = () => {
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [approveModalVisible, setApproveModalVisible] = useState(false);
   const [showAddSpotModal, setShowAddSpotModal] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isFecthing, setIsFecthing] = useState(false);
 
-  const progressToastId = "uploadProgress"; // persistent toast ID
+  const progressToastId = "uploadProgress";
 
   const handleCloseApproveModal = () => {
     setApproveModalVisible(false);
@@ -54,18 +61,81 @@ const SpotScreen = () => {
   };
 
   const handleApproved = async (updatedSpot: Spot) => {
+    console.log("Approving spot:", updatedSpot);
     if (!updatedSpot || updatedSpot.photos.length === 0) return;
+    setApproveModalVisible(false);
 
+    const toastId = "approveProgress";
     Toast.show({
       type: "progress",
-      text1: "Finalizing approval...",
-      props: { progress: 0.2 },
+      text1: "Starting approval...",
+      props: { progress: 0 },
       autoHide: false,
-      toastId: progressToastId,
+      toastId,
     });
 
     try {
+      const totalSteps = 5;
+      let currentStep = 1;
+
+      const updateProgress = (text: string) => {
+        const progress = Math.min(currentStep / totalSteps, 1);
+        Toast.show({
+          type: "progress",
+          text1: text,
+          props: { progress },
+          autoHide: false,
+          toastId,
+        });
+      };
+
+      // Step 1: Start visual loading (simulate initial work)
+      updateProgress("Preparing data...");
+      await simulateProgress(800, (p) => {
+        Toast.show({
+          type: "progress",
+          text1: "Preparing data...",
+          props: { progress: p * 0.2 },
+          autoHide: false,
+          toastId,
+        });
+      });
+      currentStep++;
+
+      // Step 2: Run finalizeApproval
+      updateProgress("Finalizing approval...");
       await finalizeApproval(updatedSpot);
+      currentStep++;
+
+      // Step 3: Simulate syncing / server confirmation
+      updateProgress("Syncing changes...");
+      await simulateProgress(1000, (p) => {
+        Toast.show({
+          type: "progress",
+          text1: "Syncing changes...",
+          props: { progress: 0.4 + p * 0.3 },
+          autoHide: false,
+          toastId,
+        });
+      });
+      currentStep++;
+
+      // Step 4: Refresh data
+      updateProgress("Refreshing data...");
+      await fetchData();
+      currentStep++;
+
+      // Step 5: Finalizing visual completion
+      updateProgress("Wrapping up...");
+      await simulateProgress(600, (p) => {
+        Toast.show({
+          type: "progress",
+          text1: "Wrapping up...",
+          props: { progress: 0.8 + p * 0.2 },
+          autoHide: false,
+          toastId,
+        });
+      });
 
       Toast.hide();
       Toast.show({
@@ -75,7 +145,6 @@ const SpotScreen = () => {
 
       setApproveModalVisible(false);
       setSelectedSpot(null);
-      fetchData();
     } catch (error) {
       console.error("Error approving spot:", error);
       Toast.hide();
@@ -87,12 +156,16 @@ const SpotScreen = () => {
     }
   };
 
+  const handleDeleted = async () => {
+    await fetchData();
+    setDeleteModalVisible(false);
+    setSelectedSpot(null);
+  };
+
   const handleSave = async (updatedSpot: formDataSpot) => {
     if (!selectedSpot) return;
-
     setUploadingPhotos(true);
 
-    // Show persistent progress toast
     Toast.show({
       type: "progress",
       text1: "Preparing upload...",
@@ -102,7 +175,7 @@ const SpotScreen = () => {
     });
 
     try {
-      // 1️⃣ Separate old and new photos
+      // Separate old and new photos
       const oldPhotoEntries = updatedSpot.photos.filter(
         (p) => typeof p !== "string"
       ) as Spot["photos"];
@@ -111,7 +184,6 @@ const SpotScreen = () => {
       ) as string[];
 
       let updatedPhotos: Photo[] = [...oldPhotoEntries];
-
       const totalSteps = 5 + newPhotoEntries.length;
       let currentStep = 1;
 
@@ -126,44 +198,56 @@ const SpotScreen = () => {
         });
       };
 
-      // Step 2: Delete removed photos
       const photosToDelete = (selectedSpot.photos || []).filter(
         (p) => !oldPhotoEntries.some((op) => op.url === p.url)
       );
       if (photosToDelete.length > 0) {
         updateProgress("Deleting removed photos...");
-        await deletePhotosFromSupabase(photosToDelete);
+        if (updatedSpot.status === "Approved") {
+          await deletePhotosFromR2(photosToDelete);
+        } else {
+          await deletePhotosFromSupabase(photosToDelete);
+        }
       }
       currentStep++;
 
-      // Step 3: Upload new photos (each photo is a separate step)
-      const folderUUID = oldPhotoEntries[0]?.uuid || (uuid.v4() as string);
-      for (let i = 0; i < newPhotoEntries.length; i++) {
-        updateProgress(`Uploading photo ${i + 1}/${newPhotoEntries.length}...`);
-        const uploadedPhotos = await uploadPhotosToSupabase(
-          { ...updatedSpot, photos: [newPhotoEntries[i]] },
-          folderUUID
-        );
-        updatedPhotos = [...updatedPhotos, ...(uploadedPhotos ?? [])];
-        currentStep++;
+      if (updatedSpot.status === "Approved" && newPhotoEntries.length > 0) {
+        const folderID = oldPhotoEntries[0]?.spotId || selectedSpot.id;
+        for (let i = 0; i < newPhotoEntries.length; i++) {
+          updateProgress(`Uploading photo ${i + 1}/${newPhotoEntries.length}...`);
+          const uploadedPhotos = await uploadPhotosToR2(
+            { ...updatedSpot, photos: [newPhotoEntries[i]] },
+            folderID.toString()
+          );
+          updatedPhotos = [...updatedPhotos, ...(uploadedPhotos ?? [])];
+          currentStep++;
+        }
+      } else {
+        const folderUUID = oldPhotoEntries[0]?.uuid || (uuid.v4() as string);
+        for (let i = 0; i < newPhotoEntries.length; i++) {
+          updateProgress(`Uploading photo ${i + 1}/${newPhotoEntries.length}...`);
+          const uploadedPhotos = await uploadPhotosToSupabase(
+            { ...updatedSpot, photos: [newPhotoEntries[i]] },
+            folderUUID
+          );
+          updatedPhotos = [...updatedPhotos, ...(uploadedPhotos ?? [])];
+          currentStep++;
+        }
+
       }
 
-      // Step 4: Save spot data
       updateProgress("Saving spot data...");
       await saveSpot({ ...updatedSpot, photos: updatedPhotos } as Spot);
       currentStep++;
 
-      // Step 5: Refresh spots
       updateProgress("Refreshing data...");
       await fetchData();
       currentStep++;
 
-      // Done
       Toast.hide();
       Toast.show({
         type: "success",
         text1: "Spot saved successfully",
-        text2: "All photos uploaded and data updated",
       });
 
       setEditModalVisible(false);
@@ -181,8 +265,82 @@ const SpotScreen = () => {
     }
   };
 
+  const handleAddSpot = async (newSpot: addSpotData) => {
+    if (!newSpot) return;
+
+    Toast.show({
+      type: "progress",
+      text1: "Preparing new spot...",
+      props: { progress: 0 },
+      autoHide: false,
+      toastId: progressToastId,
+    });
+
+    try {
+      const folderUUID = uuid.v4() as string;
+      let uploadedPhotos: Photo[] = [];
+      const totalSteps = 3 + newSpot.photos.length;
+      let currentStep = 1;
+
+      const updateProgress = (text: string) => {
+        const progress = currentStep / totalSteps;
+        Toast.show({
+          type: "progress",
+          text1: text,
+          props: { progress },
+          autoHide: false,
+          toastId: progressToastId,
+        });
+      };
+
+      for (let i = 0; i < newSpot.photos.length; i++) {
+        updateProgress(`Uploading photo ${i + 1}/${newSpot.photos.length}...`);
+        const photos = await uploadPhotosToSupabase(
+          { ...newSpot, photos: [newSpot.photos[i]] },
+          folderUUID
+        );
+        if (photos) uploadedPhotos.push(...photos);
+        currentStep++;
+      }
+
+      updateProgress("Saving new spot...");
+      const res = await addSpot({ ...newSpot, photos: uploadedPhotos } as Spot);
+      currentStep++;
+
+      if (uploadedPhotos.length > 0) {
+        updateProgress("Finalizing photos...");
+        const photoRecords = uploadedPhotos.map((p) => ({
+          url: p.url,
+          uuid: folderUUID,
+          spotId: res.id,
+        }));
+        const { error: photoInsertError } = await insertPhotoRecords(photoRecords);
+        if (photoInsertError) throw new Error("Failed to insert photo records");
+      }
+
+      updateProgress("Refreshing data...");
+      await fetchData();
+      currentStep++;
+
+      Toast.hide();
+      Toast.show({
+        type: "success",
+        text1: "Spot added successfully",
+      });
+    } catch (error) {
+      console.error("Error adding new spot:", error);
+      Toast.hide();
+      Toast.show({
+        type: "error",
+        text1: "Failed to add spot",
+        text2: (error as Error)?.message || "Unexpected error occurred",
+      });
+    }
+  };
+
   const fetchData = async () => {
     try {
+      setIsFecthing(true);
       Toast.show({
         type: "progress",
         text1: "Loading spots...",
@@ -206,8 +364,8 @@ const SpotScreen = () => {
         : await fetchSpots("approved");
 
       await progressPromise;
-
       setSpots(data);
+      setIsFecthing(false);
 
       Toast.hide();
       Toast.show({
@@ -216,7 +374,6 @@ const SpotScreen = () => {
       });
     } catch (error) {
       console.error("Error fetching spots:", error);
-
       Toast.hide();
       Toast.show({
         type: "error",
@@ -230,50 +387,109 @@ const SpotScreen = () => {
     fetchData();
   }, [showSpotSuggestions]);
 
-  const onRefresh = async () => {
-    await fetchData();
-  };
+  const onRefresh = async () => await fetchData();
+
+  // ✅ Memoized filtered list for search
+  const filteredSpots = useMemo(() => {
+    if (!searchQuery.trim()) return spots;
+    const query = searchQuery.toLowerCase();
+    return spots.filter(
+      (s) =>
+        s.name.toLowerCase().includes(query) ||
+        s.city?.toLowerCase().includes(query) ||
+        s.category?.toLowerCase().includes(query)
+    );
+  }, [spots, searchQuery]);
 
   return (
     <View style={{ flex: 1 }}>
-      <AppHeader title="Spots" style={{ justifyContent: "flex-start" }} />
+      <Header title="Spots" style={{ justifyContent: "flex-start" }} />
 
       <View style={styles.screen}>
         <View
-        style={{ flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",}}>
-
-        <TouchableOpacity
-          style={styles.title}
-          onPress={() => setShowSpotSuggestions(!showSpotSuggestions)}
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
         >
-          <Text style={styles.title}>
-            {showSpotSuggestions ? "Spot suggestions" : "Approved spots"}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={{ alignItems: "center", padding: 0, margin: 0, position: "relative", bottom: -5 }}
-          onPress={() => {
-            setShowAddSpotModal(true);
-          }}>
-          <Ionicons name="add-circle" size={50} color={ambrasGreen}  />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.title}
+            onPress={() => setShowSpotSuggestions(!showSpotSuggestions)}
+          >
+            <Text style={styles.title}>
+              {showSpotSuggestions ? "Suggestions" : "Approved"}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{
+              alignItems: "center",
+              padding: 0,
+              margin: 0,
+              position: "relative",
+            }}
+            onPress={() => setShowAddSpotModal(true)}
+          >
+            <Ionicons name="add-circle" size={50} color={ambrasGreen} />
+          </TouchableOpacity>
         </View>
 
+        {/* ✅ Search bar */}
+        <View style={{ marginVertical: 10 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              backgroundColor: "#f0f0f0",
+              borderRadius: 8,
+              paddingHorizontal: 10,
+              height: 40,
+            }}
+          >
+            <Ionicons
+              name="search"
+              size={20}
+              color="#888"
+              style={{ marginRight: 8 }}
+            />
+            <TextInput
+              style={{ flex: 1, fontSize: 16 }}
+              placeholder="Search spots..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              editable={!uploadingPhotos}
+            />
+          </View>
+        </View>
+
+        {/* ✅ Use filteredSpots instead of spots */}
         <SpotsList
-          spots={spots}
+          isVisible={!isFecthing}
+          spots={filteredSpots}
+          mode={showSpotSuggestions ? "suggestions" : "approvals"}
           onEdit={handleEdit}
+          onDelete={(id) => {
+            setSelectedSpot(spots.find((s) => s.id === id) || null);
+            setDeleteModalVisible(true);
+          }}
           onApprove={handleOpenApproveModal}
           onRefresh={onRefresh}
         />
 
-        <EditSpotModal
+        <SpotModal
           visible={editModalVisible}
+          mode="edit"
           spot={selectedSpot}
           onClose={handleCloseEditModal}
           onSave={handleSave}
-          onApprove={handleApproved}
+        />
+
+        <SpotModal
+          visible={showAddSpotModal}
+          mode="add"
+          onClose={() => setShowAddSpotModal(false)}
+          onSave={handleAddSpot}
         />
 
         <ApproveSpotModal
@@ -283,14 +499,15 @@ const SpotScreen = () => {
           onApprove={handleApproved}
         />
 
-        <AddSpotModal
-          visible={showAddSpotModal}
-          onClose={() => setShowAddSpotModal(false)}
-          onSave={async (newSpot) => {
-            setShowAddSpotModal(false);
-            await fetchData();
-          }}/>
-
+        <DeleteSpotModal
+          visible={deleteModalVisible}
+          spot={selectedSpot}
+          onClose={() => {
+            setDeleteModalVisible(false);
+            setSelectedSpot(null);
+          }}
+          onDeleted={handleDeleted}
+        />
       </View>
     </View>
   );

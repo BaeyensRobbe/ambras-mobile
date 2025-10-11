@@ -116,3 +116,23 @@ export interface SpotSubmissionResult {
   spotId?: number;
   error?: Error;
 }
+
+export type Event = {
+  "id": 2,
+  "title": string,
+  "description": string,
+  "start_time": string,
+  "end_time": string,
+  "all_day": boolean,
+  "location": string,
+  "created_at": string,
+  "updated_at": string
+}
+
+export type Task = {
+  id: number;
+  title: string;
+  description?: string;
+  due_date: string; // ISO date string
+  completed: boolean;
+}

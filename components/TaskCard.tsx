@@ -12,7 +12,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, due }) => {
   return (
     <View style={styles.card}>
       <Text style={styles.taskText}>{task}</Text>
-      <Text style={styles.taskDue}>Due: {due}</Text>
+      <Text style={styles.taskDue}>Due: {new Date(due).toLocaleDateString()}</Text>
     </View>
   );
 };

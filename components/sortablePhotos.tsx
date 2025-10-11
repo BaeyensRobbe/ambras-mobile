@@ -36,12 +36,18 @@ export const SortablePhotos: React.FC<SortablePhotosProps> = ({
   }, [photos]);
 
   const movePhoto = (from: number, to: number) => {
-    if (from === to) return;
-    const updated = [...photos];
+  if (from === to) return;
+  
+  setPhotos(prev => {
+    const updated = [...prev];
+    console.log("Current photo order before move:", updated.map(p => p.id || p.url));
     const [moved] = updated.splice(from, 1);
     updated.splice(to, 0, moved);
-    setPhotos(updated);
-  };
+    console.log(`Moved photo from index ${from} to ${to}`);
+    console.log("Updated photo order:", updated.map(p => p.id || p.url));
+    return updated;
+  });
+};
 
   const getIndexFromGesture = (dy: number, dx: number, from: number) => {
     // Estimate how many "slots" we moved vertically or horizontally

@@ -5,14 +5,17 @@ import { styles } from "../styles";
 import { Spot } from "../types/types";
 
 type Props = {
+  isVisible: boolean;
   spots: Spot[];
+  mode: 'suggestions' | 'approvals';
   loading?: boolean;
   onApprove?: (id: number) => void;
   onEdit?: (id: number) => void;
+  onDelete: (id: number) => void;
   onRefresh?: () => void;
 };
 
-const SpotsList: React.FC<Props> = ({ spots, loading, onApprove, onEdit, onRefresh }) => {
+const SpotsList: React.FC<Props> = ({ spots, mode, loading, onApprove, onEdit, onDelete, onRefresh }) => {
 
   if (loading) {
     return (
@@ -59,36 +62,48 @@ const SpotsList: React.FC<Props> = ({ spots, loading, onApprove, onEdit, onRefre
             </Text>
           {spot.notes && <Text style={{ color: "#444", marginBottom: 6 }}>{spot.notes}</Text>}
 
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             {onEdit && (
               <>
+              <TouchableOpacity
+                onPress={() => onEdit(spot.id)}
+                style={{
+                backgroundColor: "blue",
+                paddingVertical: 6,
+                paddingHorizontal: 12,
+                borderRadius: 6,
+                }}
+              >
+                <Text style={{ color: "#fff", fontWeight: "600" }}>Edit</Text>
+              </TouchableOpacity>
+              {mode === 'suggestions' && spot.category !== null && spot.photos.length > 0 && (
                 <TouchableOpacity
-                  onPress={() => onEdit(spot.id)}
-                  style={{
-                    backgroundColor: "blue",
-                    paddingVertical: 6,
-                    paddingHorizontal: 12,
-                    borderRadius: 6,
-                  }}
+                onPress={() => onApprove(spot.id)}
+                style={{
+                  backgroundColor: "#006400",
+                  paddingVertical: 6,
+                  paddingHorizontal: 12,
+                  borderRadius: 6,
+                }}
                 >
-                  <Text style={{ color: "#fff", fontWeight: "600" }}>Edit</Text>
+                <Text style={{ color: "#fff", fontWeight: "600" }}>Approve</Text>
                 </TouchableOpacity>
-                {onApprove && (
-                  <TouchableOpacity
-                    onPress={() => onApprove(spot.id)}
-                    style={{
-                      backgroundColor: "#006400",
-                      paddingVertical: 6,
-                      paddingHorizontal: 12,
-                      borderRadius: 6,
-                    }}
-                  >
-                    <Text style={{ color: "#fff", fontWeight: "600" }}>Approve</Text>
-                  </TouchableOpacity>
-                )}
+              )}
               </>
             )}
-          </View>
+            <TouchableOpacity
+              onPress={() => onDelete(spot.id)}
+              style={{
+              backgroundColor: "red",
+              paddingVertical: 6,
+              paddingHorizontal: 12,
+              borderRadius: 6,
+              marginLeft: 8,
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "600" }}>Delete</Text>
+            </TouchableOpacity>
+            </View>
         </View>
       )}
     />

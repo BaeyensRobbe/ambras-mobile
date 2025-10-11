@@ -14,7 +14,8 @@ export const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     color: ambrasGreen,
-    marginBottom: 10,
+    marginBottom: 0,
+    marginTop: 0,
   },
   subtitle: {
     fontSize: 20,
@@ -151,6 +152,7 @@ export const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     padding: 10,
+    paddingTop: 30,
   },
   locationContainer: {
     flex: 1,

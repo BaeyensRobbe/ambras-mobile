@@ -8,6 +8,7 @@ import {
   FlatList,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { Ionicons } from "@expo/vector-icons";
 import { Photo } from "../types/types";
 import { styles, ambrasGreen } from "../styles";
 
@@ -60,8 +61,14 @@ const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
         <View style={styles.flexRow}>
 
         <Text style={styles.modalHeader}>Manage Photos</Text>
-        <TouchableOpacity>
-          <Text style={styles.deleteButton} onPress={handleAddPhoto}>+ Add Photo</Text>
+        <TouchableOpacity style={{
+              alignItems: "center",
+              padding: 0,
+              margin: 0,
+              position: "relative",
+            }}
+            onPress={handleAddPhoto}>
+          <Ionicons name="add-circle" size={50} color={ambrasGreen} />
         </TouchableOpacity>
         </View>
 

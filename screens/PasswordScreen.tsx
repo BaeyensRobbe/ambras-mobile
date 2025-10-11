@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, Alert } from "react-native";
 import { styles } from "../styles";
 import AppHeader from "../components/AppHeader"; // ← import your custom header
-import { ip_address } from "../config/ip";
+import { VERCEL_URL } from "@env";
 
 const PasswordScreen = () => {
   const [passwords, setPasswords] = useState<{ name: string; username: string; password: string }[]>([]);
@@ -11,8 +11,9 @@ const PasswordScreen = () => {
   useEffect(() => {
     const fetchPasswords = async () => {
       try {
-        const response = await fetch(`http://${ip_address}:4000/passwords`);
+        const response = await fetch(`http://${VERCEL_URL}:4000/passwords`);
         const data = await response.json();
+        console.log("Fetch response:", data);
         setPasswords(data);
       } catch (error) {
         console.error("Error fetching passwords:", error);
