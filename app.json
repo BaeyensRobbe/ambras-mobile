@@ -4,7 +4,7 @@
     "slug": "ambras-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/ambras-logo.jpg",
+    "icon": "./assets/ambras-logo/android/mipmap-hdpi/ic_launcher.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -17,12 +17,17 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/ambras-logo/android/mipmap-hdpi/ic_launcher_foreground.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.robbe.pk.mobile"
+      "package": "com.robbe.pk.mobile",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCcGjOOEEQkW4I6q6XYR7M1CM-NVswyKLI"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"

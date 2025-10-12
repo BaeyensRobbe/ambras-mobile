@@ -168,7 +168,18 @@ const ApproveSpotModal: React.FC<ApproveSpotModalProps> = ({ visible, spot, onCl
         {/* Approve Button */}
         <View style={{ paddingVertical: 10 }}>
           <TouchableOpacity
-            onPress={() => onApprove({ ...spot, photos })}
+            onPress={() =>
+  onApprove({
+    ...spot,
+    photos: photos.map(p => ({
+      id: p.id,
+      url: p.url,
+      spotId: p.spotId,
+      uuid: p.uuid,
+      // add any other simple fields you need, but NO Animated.Values
+    })),
+  })
+}
             style={{
               backgroundColor: ambrasGreen,
               padding: 15,

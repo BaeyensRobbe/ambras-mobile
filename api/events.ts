@@ -1,4 +1,4 @@
-import { API2_URL, VERCEL_URL} from '@env';
+import { VERCEL_URL} from '@env';
 
 export const fetchNextEvent = async () => {
   try {
