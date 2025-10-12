@@ -11,7 +11,7 @@ module.exports = function (api) {
           allowUndefined: false,
         },
       ],
-      'react-native-reanimated/plugin',
+      'react-native-reanimated/plugin' // Must always be last
     ],
   };
 };
