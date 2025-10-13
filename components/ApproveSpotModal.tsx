@@ -162,7 +162,7 @@ const ApproveSpotModal: React.FC<ApproveSpotModalProps> = ({ visible, spot, onCl
             showsHorizontalScrollIndicator={false}
             pagingEnabled
           /> */}
-          <SortablePhotos photos={photos} setPhotos={setPhotos} />
+          <SortablePhotos photos={photos} setPhot os={setPhotos} />
         </ScrollView> 
 
         {/* Approve Button */}
