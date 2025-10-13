@@ -4,13 +4,14 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   FlatList,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { Photo } from "../types/types";
 import { styles, ambrasGreen } from "../styles";
+import {Image} from "expo-image"
+
 
 interface PhotoSelectorModalProps {
   visible: boolean;
@@ -81,7 +82,7 @@ const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
             const uri = typeof item === "string" ? item : item.url;
             return (
               <View style={styles.imageContainer}>
-                <Image source={{ uri }} style={styles.image} />
+                <Image source={{ uri }} style={styles.image} contentFit="cover" cachePolicy="disk" />
                 <TouchableOpacity
                   style={styles.deleteButton}
                   onPress={() => handleDeletePhoto(item)}

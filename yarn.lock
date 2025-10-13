@@ -2749,6 +2749,11 @@ expo-image-picker@^17.0.8:
   dependencies:
     expo-image-loader "~6.0.0"
 
+expo-image@~3.0.9:
+  version "3.0.9"
+  resolved "https://registry.yarnpkg.com/expo-image/-/expo-image-3.0.9.tgz#03bc48a21f7ff32c0a36d24585bc8afac9c72ca7"
+  integrity sha512-GkPIjeqrODMBdpbRWOzbwiq8ztxjgq1rdZrnqwt/pzQavgXPlr4rW/7aigue9Jm5t5vebhMNAuc1A/XIXXqpcA==
+
 expo-keep-awake@~15.0.7:
   version "15.0.7"
   resolved "https://registry.yarnpkg.com/expo-keep-awake/-/expo-keep-awake-15.0.7.tgz#4eada556e1cca6c9c2e5aa39478fd01816cd0bc9"

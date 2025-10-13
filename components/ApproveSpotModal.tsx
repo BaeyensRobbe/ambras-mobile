@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Modal, TouchableOpacity, ScrollView, Image, FlatList, Dimensions } from "react-native";
+import { View, Text, Modal, TouchableOpacity, ScrollView, FlatList, Dimensions } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { Spot, Photo } from "../types/types";
 import { styles, ambrasGreen } from "../styles";
 import { SortablePhotos } from "./sortablePhotos";
+import { Image } from "expo-image"
 
 interface ApproveSpotModalProps {
   visible: boolean;
@@ -60,7 +61,8 @@ const ApproveSpotModal: React.FC<ApproveSpotModalProps> = ({ visible, spot, onCl
       <Image
         source={{ uri: item.url }}
         style={{ width: width * 0.7, height: 200, borderRadius: 8 }}
-        resizeMode="cover"
+        contentFit="cover"
+        cachePolicy="disk"
       />
       <Text style={{ color: "white", marginTop: 5 }}>{index + 1}</Text>
     </View>
