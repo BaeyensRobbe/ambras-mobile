@@ -2,13 +2,13 @@ import React, { useRef, useEffect, useState } from "react";
 import {
   View,
   Text,
-  Image,
   PanResponder,
   Animated,
   Dimensions,
 } from "react-native";
 import { Photo } from "../types/types";
 import { styles } from "../styles";
+import { Image } from "expo-image"
 
 const { width } = Dimensions.get("window");
 const IMAGE_SIZE = width * 0.42; // two per row, with spacing
@@ -137,7 +137,8 @@ export const SortablePhotos: React.FC<SortablePhotosProps> = ({
                     height: IMAGE_SIZE,
                     borderRadius: 10,
                   }}
-                  resizeMode="cover"
+                  contentFit="cover"
+                  cachePolicy="disk"
                 />
                 <Text
                   style={{

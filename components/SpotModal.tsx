@@ -7,6 +7,7 @@ import { TextInputModal } from "./TextInputModal";
 import LocationPickerModal from "./LocationPickerModal";
 import PhotoSelectorModal from "./PhotoSelector";
 import { fetchCitiesOnly } from "../utils/spotHelperFunctions";
+import NotesInputModal from "./notesInputModal";
 
 // Define props
 interface SpotModalProps {
@@ -21,19 +22,19 @@ const SpotModal: React.FC<SpotModalProps> = ({ visible, mode, spot = null, onClo
   const initialData = mode === "edit"
     ? spot
     : {
-        name: '',
-        category: '',
-        lat: 0,
-        lng: 0,
-        photos: [],
-        notes: '',
-        city: '',
-        isPkPark: false,
-        isCovered: false,
-        hasFlipArea: false,
-        hasSwings: false,
-        isFavorite: false,
-      };
+      name: '',
+      category: '',
+      lat: 0,
+      lng: 0,
+      photos: [],
+      notes: '',
+      city: '',
+      isPkPark: false,
+      isCovered: false,
+      hasFlipArea: false,
+      hasSwings: false,
+      isFavorite: false,
+    };
 
   const [formData, setFormData] = useState<formDataSpot | addSpotData | null>(initialData);
   const [activeField, setActiveField] = useState<keyof Spot | null>(null);
@@ -42,6 +43,7 @@ const SpotModal: React.FC<SpotModalProps> = ({ visible, mode, spot = null, onClo
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
   const [photoSelectorVisible, setPhotoSelectorVisible] = useState(false);
   const [cities, setCities] = useState<string[]>(["Leuven", "Brussels", "Antwerp", "Ghent", "Liège", "Louvain-la-Neuve", "Other"]);
+  const [notesModalVisible, setNotesModalVisible] = useState(false); // new state for notes modal
 
   useEffect(() => {
     setFormData(initialData);
@@ -84,6 +86,9 @@ const SpotModal: React.FC<SpotModalProps> = ({ visible, mode, spot = null, onClo
       setLocationPickerVisible(true);
     } else if (type === "photos") {
       setPhotoSelectorVisible(true);
+    } else if (field === "notes") {
+      setActiveField(field);
+      setNotesModalVisible(true); // new state
     } else {
       setActiveField(field);
       setTextInputVisible(true);
@@ -91,33 +96,33 @@ const SpotModal: React.FC<SpotModalProps> = ({ visible, mode, spot = null, onClo
   };
 
   const handlePickerSelect = (value: string) => {
-  if (!activeField) return;
+    if (!activeField) return;
 
-  if (activeField === "city" && value === "Other") {
+    if (activeField === "city" && value === "Other") {
+      setPickerVisible(false);
+      setTextInputVisible(true);
+      setActiveField("city"); // stay in city mode
+      return;
+    }
+
+    setFormData({ ...formData, [activeField]: value });
     setPickerVisible(false);
-    setTextInputVisible(true);
-    setActiveField("city"); // stay in city mode
-    return;
-  }
-
-  setFormData({ ...formData, [activeField]: value });
-  setPickerVisible(false);
-  setActiveField(null);
-};
+    setActiveField(null);
+  };
 
   const handleTextInputSave = (value: string) => {
-  if (!activeField) return;
-  const updatedData = { ...formData, [activeField]: value };
+    if (!activeField) return;
+    const updatedData = { ...formData, [activeField]: value };
 
-  // If user added a new city, append it to the cities list
-  if (activeField === "city" && value && !cities.includes(value)) {
-    setCities(prev => [...prev.filter(c => c !== "Other"), value, "Other"]);
-  }
+    // If user added a new city, append it to the cities list
+    if (activeField === "city" && value && !cities.includes(value)) {
+      setCities(prev => [...prev.filter(c => c !== "Other"), value, "Other"]);
+    }
 
-  setFormData(updatedData);
-  setTextInputVisible(false);
-  setActiveField(null);
-};
+    setFormData(updatedData);
+    setTextInputVisible(false);
+    setActiveField(null);
+  };
 
 
   const handleSave = () => {
@@ -149,8 +154,8 @@ const SpotModal: React.FC<SpotModalProps> = ({ visible, mode, spot = null, onClo
                     {(value && value.length > 0) ? `${value.length} photo${value.length > 1 ? "s" : ""}` : `Edit ${field.label}`}
                   </Text>
                 ) : (
-                  <Text style={{ fontSize: 16, color: value ? "#000" : "#aaa" }}>
-                    {value || (mode === "edit" ? `Edit ${field.label}` : `Add ${field.label}`)}
+                  <Text style={{ fontSize: 16, color: value ? "#000" : "#ff0000ff" }}>
+                    {value || (mode === "edit" ? `Add ${field.label}` : `Add ${field.label}`)}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -193,6 +198,17 @@ const SpotModal: React.FC<SpotModalProps> = ({ visible, mode, spot = null, onClo
             onClose={() => setPhotoSelectorVisible(false)}
             onChange={(photos: (string | Photo)[]) => setFormData({ ...formData, photos })}
           />
+
+          <NotesInputModal
+            visible={notesModalVisible}
+            value={formData.notes || ""}
+            onClose={() => setNotesModalVisible(false)}
+            onSave={(newNotes) => {
+              setFormData({ ...formData, notes: newNotes });
+              setNotesModalVisible(false);
+            }}
+          />
+
 
           <View style={styles.buttonRow}>
             <TouchableOpacity onPress={onClose} style={styles.cancelButton}>

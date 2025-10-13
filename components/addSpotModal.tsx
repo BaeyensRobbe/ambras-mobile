@@ -63,7 +63,7 @@ const AddSpotModal: React.FC<AddSpotModalProps> = ({ visible, onClose, onSave })
                       : `Edit ${field.label}`}
                   </Text>
                 ) : (
-                  <Text style={{ fontSize: 16, color: value ? "#000" : "#aaa" }}>
+                  <Text style={{ fontSize: 16, color: value ? "#000" : "#ff0000ff" }}>
                     {value || `Add ${field.label}`}
                   </Text>
                 )}

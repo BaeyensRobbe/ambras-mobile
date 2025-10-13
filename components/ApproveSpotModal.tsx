@@ -86,17 +86,23 @@ const ApproveSpotModal: React.FC<ApproveSpotModalProps> = ({ visible, spot, onCl
             } else if (!value) {
               value = "-";
             }
+
+            const isMultilineField = field.key === "notes";
             return (
               <View
                 key={field.key}
                 style={{
-                  paddingVertical: 12,
-                  borderBottomWidth: 1,
-                  borderBottomColor: "#eee",
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: "#eee",
+        ...(isMultilineField
+          ? { flexDirection: "column", alignItems: "flex-start" }
+          : {
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }),
+      }}
               >
                 <Text style={{ fontWeight: "600", fontSize: 16 }}>{field.label}</Text>
                 {field.type === "check" ? (
@@ -164,7 +170,7 @@ const ApproveSpotModal: React.FC<ApproveSpotModalProps> = ({ visible, spot, onCl
             showsHorizontalScrollIndicator={false}
             pagingEnabled
           /> */}
-          <SortablePhotos photos={photos} setPhot os={setPhotos} />
+          <SortablePhotos photos={photos} setPhotos={setPhotos} />
         </ScrollView> 
 
         {/* Approve Button */}
