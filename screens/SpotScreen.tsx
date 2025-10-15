@@ -7,6 +7,8 @@ import SpotsList from "../components/spotsList";
 import { fetchSpots } from "../api/spots";
 import { addSpotData, formDataSpot, Photo, Spot } from "../types/types";
 import { Ionicons } from "@expo/vector-icons";
+import { useRoute } from "@react-navigation/native";
+
 import {
   deletePhotosFromSupabase,
   finalizeApproval,
@@ -35,6 +37,8 @@ const SpotScreen = () => {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isFecthing, setIsFecthing] = useState(false);
+    const route = useRoute();
+
 
   const progressToastId = "uploadProgress";
 
@@ -382,6 +386,12 @@ const SpotScreen = () => {
       });
     }
   };
+
+   useEffect(() => {
+    if (route.params?.addSpotModal) {
+      setShowAddSpotModal(true);
+    }
+  }, [route.params]);
 
   useEffect(() => {
     fetchData();

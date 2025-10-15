@@ -4,7 +4,7 @@ import { View, Dimensions, Alert } from "react-native";
 import { Calendar } from "react-native-big-calendar";
 import AppHeader from "../components/AppHeader"; 
 import AddItemModal from "../components/addTaskOrEventModal";
-import { addTask } from "../api/events";
+import { addEvent, addTask } from "../api/events";
 import { VERCEL_URL } from "@env";
 
 type CalendarEvent = {
@@ -52,21 +52,20 @@ const CalendarScreen = () => {
 
 
   // Fetch tasks and events
+  const fetchData = async () => {
+  try {
+    const tasksRes = await fetch(`http://${VERCEL_URL}/tasks`);
+    const tasksData = await tasksRes.json();
+    setTasks(tasksData);
+
+    const eventsRes = await fetch(`http://${VERCEL_URL}/events`);
+    const eventsData = await eventsRes.json();
+    setEvents(eventsData);
+  } catch (err) {
+    console.error(err);
+  }
+};
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const tasksRes = await fetch(`http://${VERCEL_URL}:4000/tasks`);
-        const tasksData = await tasksRes.json();
-        setTasks(tasksData);
-
-        const eventsRes = await fetch(`http://${VERCEL_URL}:4000/events`);
-        const eventsData = await eventsRes.json();
-        setEvents(eventsData);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
     fetchData();
   }, []);
 
@@ -123,18 +122,9 @@ const CalendarScreen = () => {
     if (modalType === "task") {
       await addTask(item);
     } else {
-      const newEvent: Event = {
-        id: Date.now(), // temporary id
-        title: item.title,
-        description: item.description,
-        start_time: item.start,
-        end_time: item.end,
-        all_day: item.allDay,
-        location: item.location,
-      };
-      setEvents((prev) => [...prev, newEvent]);
+      await addEvent(item);
     }
-
+    await fetchData(); // Refresh data
     setModalVisible(false);
   };
 

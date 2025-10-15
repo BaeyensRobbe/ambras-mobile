@@ -3,6 +3,7 @@ import { StyleSheet } from "react-native";
 export const ambrasGreen = "#1F3B28";
 
 export const styles = StyleSheet.create({
+  // SCREENS
   screen: {
     flex: 1,
     backgroundColor: "#F5F5F5",
@@ -10,6 +11,8 @@ export const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 0,
   },
+
+  // TEXT
   title: {
     fontSize: 24,
     fontWeight: "bold",
@@ -24,6 +27,63 @@ export const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 10,
   },
+  cardTitle: {
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  cardValue: {
+    fontSize: 20,
+    color: ambrasGreen,
+  },
+  taskText: {
+    fontSize: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: ambrasGreen,
+    marginBottom: 15,
+    textAlign: "center",
+  },
+    statLabel: {
+    fontSize: 13,
+    color: "#555",
+    marginTop: 4,
+  },
+    buttonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  deleteButtonText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  emptyText: {
+    textAlign: "center",
+    color: "#888",
+    marginTop: 20,
+  },
+    modalHeader: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 10,
+    color: "#006400",
+  },
+  sectionHeader: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginTop: 10,
+    marginBottom: 5,
+    color: "#006400",
+  },
+  fieldLabel: {
+    fontWeight: "600",
+    fontSize: 16
+  },
+
+  // CARDS
   card: {
     backgroundColor: "#fff",
     padding: 15,
@@ -41,15 +101,6 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 5,
   },
-  cardTitle: {
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  cardValue: {
-    fontSize: 20,
-    color: ambrasGreen,
-  },
-
   taskCard: {
     backgroundColor: "#c6f6d5",
     marginRight: 10,
@@ -65,9 +116,8 @@ export const styles = StyleSheet.create({
     padding: 10,
   },
 
-  taskText: {
-    fontSize: 16,
-  },
+
+
   taskDue: {
     fontSize: 14,
     color: "gray",
@@ -95,13 +145,7 @@ export const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 5,
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: ambrasGreen,
-    marginBottom: 15,
-    textAlign: "center",
-  },
+
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
@@ -142,13 +186,8 @@ export const styles = StyleSheet.create({
   buttonCancel: {
     backgroundColor: "#ccc",
   },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
 
-  // styles.ts additions
+  // CONTAINERS
   modalContainer: {
     flex: 1,
     padding: 10,
@@ -158,35 +197,38 @@ export const styles = StyleSheet.create({
     flex: 1,
     padding: 0,
   },
-  modalHeader: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 10,
-    color: "#006400",
-  },
-  sectionHeader: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginTop: 10,
-    marginBottom: 5,
-    color: "#006400",
-  },
   photoContainer: {
     marginRight: 10,
     position: "relative",
   },
+    fieldContainer: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  imageContainer: {
+    position: "relative",
+    flex: 1,
+    margin: 5,
+    aspectRatio: 1,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  statsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 10,
+    marginTop: 10,
+  },
+
+  // PHOTOS
   photo: {
     width: 120,
     height: 80,
     borderRadius: 8,
-  },
-  removePhotoButton: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    backgroundColor: "red",
-    padding: 2,
-    borderRadius: 4,
   },
   photoIndex: {
     position: "absolute",
@@ -198,18 +240,59 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderRadius: 4,
   },
-  addPhotoButton: {
-    backgroundColor: "#006400",
-    padding: 10,
-    borderRadius: 8,
-    marginVertical: 10,
-    alignItems: "center",
-  },
+
+
+
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginVertical: 20,
   },
+  statCard: {
+    flex: 1,
+    aspectRatio: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: ambrasGreen, // subtle Ambras green border tint
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: ambrasGreen,
+  },
+
+  pickerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#f3f3f3",
+    borderColor: "#ccc",
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginVertical: 6,
+  },
+
+  pickerText: {
+    fontSize: 16,
+    color: "#333",
+  },
+
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 10 },
+  modal: { backgroundColor: "white", borderRadius: 12, padding: 20, maxHeight: "90%" },
+  heading: { fontSize: 18, fontWeight: "bold", marginBottom: 15 },
+  label: { fontSize: 14, marginTop: 10 },
+
+
   flexRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -271,54 +354,15 @@ export const styles = StyleSheet.create({
 
 
   // PhotoSelector styles
-  imageContainer: {
-    position: "relative",
-    flex: 1,
-    margin: 5,
-    aspectRatio: 1,
-    borderRadius: 12,
-    overflow: "hidden",
-  },
   image: {
     width: "100%",
     height: "100%",
     resizeMode: "cover",
     borderRadius: 12,
   },
-  deleteButton: {
-    position: "absolute",
-    top: 5,
-    right: 5,
-    backgroundColor: "#00000080",
-    borderRadius: 12,
-    paddingHorizontal: 6,
-  },
-  deleteButtonText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  emptyText: {
-    textAlign: "center",
-    color: "#888",
-    marginTop: 20,
-  },
 
-  fieldContainer: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
 
-  fieldLabel: {
-     fontWeight: "600", 
-     fontSize: 16
-  },
-
-   checkbox: {
+  checkbox: {
     width: 20,
     height: 20,
     borderRadius: 4,
@@ -328,10 +372,13 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-cancelButton: { flex: 1, marginRight: 5, padding: 12, borderRadius: 8, backgroundColor: "gray", alignItems: "center" },
+  // BUTTONS
+  cancelButton: { flex: 1, marginRight: 5, padding: 12, borderRadius: 8, backgroundColor: "gray", alignItems: "center" },
   saveButton: { flex: 1, marginHorizontal: 5, padding: 12, borderRadius: 8, backgroundColor: "blue", alignItems: "center" },
   approveButton: { flex: 1, marginLeft: 5, padding: 12, borderRadius: 8, backgroundColor: "green", alignItems: "center" },
-
+  deleteButton: { position: "absolute", top: 5, right: 5, backgroundColor: "#00000080",borderRadius: 12, paddingHorizontal: 6},
+  removePhotoButton: { position: "absolute", top: 4, right: 4, backgroundColor: "red", padding: 2, borderRadius: 4 },
+  addPhotoButton: { backgroundColor: "#006400", padding: 10, borderRadius: 8, marginVertical: 10, alignItems: "center" },
 });
 
 

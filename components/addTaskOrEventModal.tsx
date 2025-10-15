@@ -66,7 +66,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
       onSubmit({
         title,
         description,
-        due: dueDate.toISOString(),
+        due_date: dueDate.toISOString(),
       });
     } else {
       const start = combineDateTime(startDate, startTime);
@@ -82,7 +82,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
         recurrenceEnd: recurrence !== "None" ? recurrenceEnd.toISOString() : null,
       });
     }
-
+    
     // Reset
     setTitle("");
     setDescription("");
