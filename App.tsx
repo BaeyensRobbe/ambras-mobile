@@ -5,17 +5,19 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import DashboardScreen from "./screens/DashboardScreen";
 import CalendarScreen from "./screens/CalendarScreen";
-import PasswordScreen from "./screens/VaultScreen";
 import SpotScreen from "./screens/SpotScreen";
+import VaultScreen from "./screens/VaultScreen";
+import SpotmapScreen from "./screens/SpotmapScreen";
 import Toast from "react-native-toast-message";
 import { toastConfig } from "./utils/toastConfig";
-import VaultScreen from "./screens/VaultScreen";
+import { LocationProvider } from "./components/location/LocationContext";
 
 const ambrasGreen = "#1F3B28";
 const Tab = createBottomTabNavigator();
 
 export default function App() {
   return (
+    <LocationProvider>
     <NavigationContainer>
       <Tab.Navigator
         initialRouteName="Dashboard"
@@ -29,6 +31,7 @@ export default function App() {
             if (route.name === "Dashboard") iconName = "stats-chart";
             else if (route.name === "Vault") iconName = "lock-closed";
             else if (route.name === "Agenda") iconName = "calendar";
+            else if (route.name === "Spotmap") iconName = "map";
             else if (route.name === "Spots") iconName = "pin";
             return <Ionicons name={iconName as any} size={size} color={color} />;
           },
@@ -37,9 +40,11 @@ export default function App() {
         <Tab.Screen name="Dashboard" component={DashboardScreen} />
         <Tab.Screen name="Vault" component={VaultScreen} />
         <Tab.Screen name="Agenda" component={CalendarScreen} />
+        <Tab.Screen name="Spotmap" component={SpotmapScreen} />
         <Tab.Screen name="Spots" component={SpotScreen} />
       </Tab.Navigator>
       <Toast config={toastConfig} />
     </NavigationContainer>
+    </LocationProvider>
   );
 }

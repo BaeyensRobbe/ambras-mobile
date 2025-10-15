@@ -379,6 +379,8 @@ export const styles = StyleSheet.create({
   deleteButton: { position: "absolute", top: 5, right: 5, backgroundColor: "#00000080",borderRadius: 12, paddingHorizontal: 6},
   removePhotoButton: { position: "absolute", top: 4, right: 4, backgroundColor: "red", padding: 2, borderRadius: 4 },
   addPhotoButton: { backgroundColor: "#006400", padding: 10, borderRadius: 8, marginVertical: 10, alignItems: "center" },
+
+  icon: { width: 50, height: 50, marginBottom: 20 },
 });
 
 

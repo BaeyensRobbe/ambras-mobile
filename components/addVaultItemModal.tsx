@@ -4,7 +4,6 @@ import {
   Text,
   Modal,
   TouchableOpacity,
-  StyleSheet,
   TextInput,
   ScrollView,
   Image,
@@ -14,20 +13,21 @@ import * as ImagePicker from "expo-image-picker";
 import { ambrasGreen } from "../styles";
 import { VaultItem } from "../types/vaultTypes";
 import { PickerInputModal } from "./PickerInputModal";
-import { VERCEL_URL } from "@env";
+import { VERCEL_URL, API_BASE_URL } from "@env";
 import { styles } from "../styles";
 
 const apiUrl = VERCEL_URL.startsWith("http") ? VERCEL_URL : `https://${VERCEL_URL}`;
+const imageApiUrl = API_BASE_URL.startsWith("http") ? API_BASE_URL : `https://${API_BASE_URL}/vault/upload-image`;
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   onSubmit: (item: Omit<VaultItem, "id">) => void;
-  defaultType?: VaultItem["type"];
+  defaultType: VaultItem["type"];
 };
 
 const AddVaultItemModal: React.FC<Props> = ({ visible, onClose, onSubmit, defaultType }) => {
-  const [type, setType] = useState<VaultItem["type"]>(defaultType || "note");
+  const [type, setType] = useState<VaultItem["type"]>(defaultType);
   const [title, setTitle] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -66,47 +66,55 @@ const AddVaultItemModal: React.FC<Props> = ({ visible, onClose, onSubmit, defaul
   };
 
   // Upload image to backend, return image_url
-  const uploadImage = async (uri: string): Promise<string | null> => {
-    const fileName = uri.split("/").pop() || "image.jpg";
-    const fileType = `image/${fileName.split(".").pop()}`;
+ const uploadImage = async (uri: string, title: string): Promise<string | null> => {
+  const fileName = uri.split("/").pop() || "image.jpg";
+  const fileType = `image/${fileName.split(".").pop()}`;
 
-    const formData = new FormData();
-    formData.append("image", { uri, name: fileName, type: fileType } as any);
+  const formData = new FormData();
+  formData.append('image', {
+    uri,
+    name: fileName,
+    type: fileType,
+  } as any);
+  formData.append('title', title);
+  console.log("Uploading image", uri, title, formData);
 
-    try {
-      const res = await fetch(`${apiUrl}/vault/upload`, {
-        method: "POST",
-        body: formData,
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      if (!res.ok) throw new Error("Upload failed");
-      const data = await res.json();
-      return data.image_url; // must match backend
-    } catch (err) {
-      console.error(err);
-      Alert.alert("Failed to upload image");
-      return null;
-    }
-  };
+  try {
+    const res = await fetch(`${imageApiUrl}`, {
+      method: 'POST',
+      body: formData,
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    if (!res.ok) throw new Error('Upload failed');
+
+    const data = await res.json();
+    console.log("Upload response", data);
+    return data.image_url;
+  } catch (err) {
+    console.error(err);
+    Alert.alert('Failed to upload image');
+    return null;
+  }
+};
 
   const handleSubmit = async () => {
     if (!title) return Alert.alert("Title is required");
 
     let imageDbUrl = "";
-    if (type === "image") {
+    if (defaultType === "image") {
       if (!imageUri) return Alert.alert("Select an image");
       setUploading(true);
-      const uploadedUrl = await uploadImage(imageUri);
+      const uploadedUrl = await uploadImage(imageUri, title);
       setUploading(false);
       if (!uploadedUrl) return;
       imageDbUrl = uploadedUrl;
     }
 
-    const item: Omit<VaultItem, "id"> = { type, title };
-    if (type === "password") { item.username = username; item.password = password; }
-    if (type === "note") item.content = content;
-    if (type === "link") item.url = url;
-    if (type === "image") item.imageUri = imageDbUrl;
+    const item: Omit<VaultItem, "id"> = { type: defaultType, title };
+    if (defaultType === "password") { item.username = username; item.password = password; }
+    if (defaultType === "note") item.content = content;
+    if (defaultType === "link") item.url = url;
+    if (defaultType === "image") item.image_url = imageDbUrl;
 
     onSubmit(item);
     clearFields();
@@ -116,39 +124,29 @@ const AddVaultItemModal: React.FC<Props> = ({ visible, onClose, onSubmit, defaul
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
         <View style={styles.modal}>
-          <Text style={styles.heading}>Add Vault Item</Text>
+          <Text style={styles.heading}>Add new {defaultType}</Text>
           <ScrollView>
-            <TouchableOpacity
-              onPress={() => setPickerVisible(true)}
-              style={styles.pickerButton}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.pickerText}>
-                {type ? ` ${type}` : "Select type..."}
-              </Text>
-            </TouchableOpacity>
-
             <Text style={styles.label}>Title</Text>
             <TextInput style={styles.input} value={title} onChangeText={setTitle} />
 
-            {type === "password" && <>
+            {defaultType === "password" && <>
               <Text style={styles.label}>Username</Text>
               <TextInput style={styles.input} value={username} onChangeText={setUsername} />
               <Text style={styles.label}>Password</Text>
               <TextInput style={styles.input} value={password} onChangeText={setPassword} secureTextEntry />
             </>}
 
-            {type === "note" && <>
+            {defaultType === "note" && <>
               <Text style={styles.label}>Content</Text>
               <TextInput style={[styles.input, { height: 100 }]} value={content} onChangeText={setContent} multiline />
             </>}
 
-            {type === "link" && <>
+            {defaultType === "link" && <>
               <Text style={styles.label}>URL</Text>
               <TextInput style={styles.input} value={url} onChangeText={setUrl} />
             </>}
 
-            {type === "image" && <>
+            {defaultType === "image" && <>
               <Text style={styles.label}>Select Image</Text>
               <TouchableOpacity style={[styles.button, { backgroundColor: ambrasGreen }]} onPress={pickImage}>
                 <Text style={{ color: "white", fontWeight: "600" }}>{uploading ? "Uploading..." : "Pick from files"}</Text>

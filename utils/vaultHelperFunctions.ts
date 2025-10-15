@@ -1,7 +1,8 @@
-import { VERCEL_URL } from "@env";
+import { VERCEL_URL, API_BASE_URL } from "@env";
 import { VaultItem } from "../types/vaultTypes";
 
 const apiUrl = VERCEL_URL.startsWith("http") ? VERCEL_URL : `https://${VERCEL_URL}`;
+const imageApiUrl = API_BASE_URL.startsWith("http") ? API_BASE_URL : `https://${API_BASE_URL}/vault/signed-url`;
 
 /**
  * Fetch all vault items from backend
@@ -12,7 +13,6 @@ export const fetchVaultItems = async (): Promise<VaultItem[]> => {
     console.log("Response status:", res.status);
     if (!res.ok) throw new Error("Failed to fetch vault items");
     const data = await res.json();
-    console.log("Fetched vault items:", data);
 
     // map backend fields to frontend fields
     return data.map((item: VaultItem) => ({
@@ -23,7 +23,7 @@ export const fetchVaultItems = async (): Promise<VaultItem[]> => {
       username: item.username,
       password: item.password, // still encrypted, frontend shows ••••••
       url: item.url,
-      imageUri: item.image_url, // backend uses image_url
+      image_url: item.image_url, // backend uses image_url
     }));
   } catch (error) {
     console.error("Error fetching vault items:", error);
@@ -48,10 +48,25 @@ export const addVaultItem = async (item: Omit<VaultItem, "id">): Promise<VaultIt
     return {
       ...item,
       id: newItem.id.toString(),
-      imageUri: newItem.image_url,
+      image_url: newItem.image_url,
     };
   } catch (error) {
     console.error("Error adding vault item:", error);
+    return null;
+  }
+};
+
+export const fetchSignedUrl = async (fileName: string): Promise<string | null> => {
+  if (!fileName) return null;
+
+  try {
+    const res = await fetch(`${imageApiUrl}?file=${encodeURIComponent(fileName)}`);
+    const json = await res.json();
+    if (json.signedUrl) return json.signedUrl;
+    console.error("No signedUrl returned for", fileName, json);
+    return null;
+  } catch (err) {
+    console.error("Error fetching signed URL:", err);
     return null;
   }
 };
@@ -61,6 +76,7 @@ export const addVaultItem = async (item: Omit<VaultItem, "id">): Promise<VaultIt
  */
 export const updateVaultItem = async (id: string, item: Omit<VaultItem, "id">): Promise<VaultItem | null> => {
   try {
+    console.log("Updating vault item:", id, item);
     const res = await fetch(`${apiUrl}/vault/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

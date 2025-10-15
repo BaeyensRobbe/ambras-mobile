@@ -27,6 +27,23 @@ export type Spot = {
   photos: Photo[];
 };
 
+export type ApprovedSpot = {
+  id: number;
+  name: string;
+  city: string;
+  notes?: string;
+  category: Category;
+  isFavorite: boolean;
+  isCovered: boolean;
+  isPkPark: boolean;
+  hasFlipArea: boolean;
+  hasSwings: boolean;
+  status: 'Approved';
+  lat: number;
+  lng: number;
+  photos: Photo[];
+}
+
 export type formDataSpot = {
   id: number;
   name: string;
