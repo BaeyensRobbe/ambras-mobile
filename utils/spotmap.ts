@@ -1,18 +1,26 @@
-export const getMarkerColor = (category: string): string => {
-  switch (category.toLowerCase()) {
-    case "poleslide":
-      return "orange";
-    case "roofgap":
-      return "green";
-    case "challenge":
-      return "red";
-    case "descent":
-      return "blue";
-    case "nbd":
-      return "purple";
-    case "gym":
-      return "brown";
+const icons = {
+  gym: require('../assets/markers/yellow-dot.png'),
+  spots: require('../assets/markers/blue-dot.png'),
+  non_spot: require('../assets/markers/green-dot.png'),
+  specifics: require('../assets/markers/red-dot.png'),
+  default: require('../assets/markers/orange-dot.png'),
+}
+
+export const getIconByCategory = (category: string | undefined) => {
+  switch ((category || '').toLowerCase()) {
+    case 'gym':
+      return icons.gym;
+    case 'spots':
+      return icons.spots;
+    case 'non_spot':
+      return icons.non_spot;
+    case 'poleslide':
+    case 'roofgap':
+    case 'challenge':
+    case 'nbd':
+    case 'descent':
+      return icons.specifics;
     default:
-      return "gray";
+      return icons.default;
   }
 };
