@@ -72,7 +72,7 @@ const ApproveSpotModal: React.FC<ApproveSpotModalProps> = ({ visible, spot, onCl
     <Modal visible={visible} animationType="slide" transparent={false}>
       <View style={styles.modalContainer}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <Text style={[styles.modalHeader, { color: ambrasGreen }]}>Approve Spot</Text>
+          <Text style={[styles.modalTitle, { color: ambrasGreen }]}>Approve Spot</Text>
           <TouchableOpacity onPress={onClose}>
             <Text style={{ fontSize: 24 }}>×</Text>
           </TouchableOpacity>

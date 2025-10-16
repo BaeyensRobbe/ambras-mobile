@@ -144,7 +144,7 @@ const SpotModal: React.FC<SpotModalProps> = ({ visible, mode, spot = null, onClo
                 onPress={() => handleFieldPress(field.key as keyof Spot, field.type)}
                 style={styles.fieldContainer}
               >
-                <Text style={styles.fieldLabel}>{field.label}</Text>
+                <Text style={styles.darkTitle}>{field.label}</Text>
                 {field.type === "check" ? (
                   <View style={[styles.checkbox, { backgroundColor: value ? ambrasGreen : "#fff" }]} />
                 ) : field.type === "favorite" ? (
@@ -211,10 +211,10 @@ const SpotModal: React.FC<SpotModalProps> = ({ visible, mode, spot = null, onClo
 
 
           <View style={styles.buttonRow}>
-            <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
+            <TouchableOpacity onPress={onClose} style={[styles.actionButton, { backgroundColor: "gray" }]}>
               <Text style={styles.buttonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
+            <TouchableOpacity onPress={handleSave} style={[styles.actionButton, { backgroundColor: ambrasGreen }]}>
               <Text style={styles.buttonText}>{mode === "edit" ? "Save" : "Add spot"}</Text>
             </TouchableOpacity>
           </View>

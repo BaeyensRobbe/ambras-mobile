@@ -42,6 +42,7 @@ const DashboardScreen: React.FC = () => {
 
   const getNextEvent = async () => {
     const event = await fetchNextEvent();
+    console.log("Next event:", event);
     setNextEvent(event);
   };
 
@@ -173,7 +174,7 @@ const endTime = endDate.toLocaleTimeString([], {
         </View>
 
         <View style={{ marginBottom: 20 }}>
-          <Text style={styles.subtitle}>Upcoming Tasks</Text>
+          <Text style={[styles.title, styles.subtitle]}>Upcoming Tasks</Text>
           {upcomingTasks.length === 0 && (
             <Text style={{ marginBottom: 0, color: "#555" }}>
               No upcoming tasks
@@ -186,17 +187,17 @@ const endTime = endDate.toLocaleTimeString([], {
 
        <View style={styles.statsContainer}>
   <View style={styles.statCard}>
-    <Text style={styles.statValue}>{stats.totalApprovedSpots}</Text>
+    <Text style={styles.title}>{stats.totalApprovedSpots}</Text>
     <Text style={styles.statLabel}>Total Spots</Text>
   </View>
 
   <View style={styles.statCard}>
-    <Text style={styles.statValue}>{stats.pendingSpots}</Text>
+    <Text style={styles.title}>{stats.pendingSpots}</Text>
     <Text style={styles.statLabel}>Pending Spots</Text>
   </View>
 
   <View style={styles.statCard}>
-    <Text style={styles.statValue}>{`${stats.r2Storage} / 10`}</Text>
+    <Text style={styles.title}>{`${stats.r2Storage} / 10`}</Text>
     <Text style={styles.statLabel}>R2 Storage</Text>
   </View>
 </View>

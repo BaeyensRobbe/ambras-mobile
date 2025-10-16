@@ -1,7 +1,7 @@
 // TextInputModal.tsx
 import React, { useState, useEffect } from "react";
 import { Modal, View, Text, TextInput, TouchableOpacity } from "react-native";
-import { styles } from "../styles";
+import { ambrasGreen, styles } from "../styles";
 
 interface TextInputModalProps {
   visible: boolean;
@@ -43,10 +43,10 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
             autoFocus
           />
           <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+            <TouchableOpacity style={[styles.actionButton, { backgroundColor: "gray" }]} onPress={onClose}>
               <Text style={styles.buttonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+            <TouchableOpacity style={[styles.actionButton, { backgroundColor: ambrasGreen }]} onPress={handleSave}>
               <Text style={styles.buttonText}>Save</Text>
             </TouchableOpacity>
           </View>

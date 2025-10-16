@@ -51,7 +51,7 @@ const SpotsList: React.FC<Props> = ({ spots, mode, loading, onApprove, onEdit, o
             />
           )}
 
-          <Text style={styles.cardTitle}>{spot.name}</Text>
+          <Text style={styles.darkTitle}>{spot.name}</Text>
             <Text
             style={{
               color: spot.category ? "#555" : "red",

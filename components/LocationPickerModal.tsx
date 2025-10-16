@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Modal, View, Text, TouchableOpacity, TextInput, FlatList, Dimensions, Keyboard } from "react-native";
 import MapView, { Marker, MapEvent, AnimatedRegion } from "react-native-maps";
-import { styles } from "../styles";
+import { ambrasGreen, styles } from "../styles";
 import { MAPS_API_KEY } from "@env";
 import axios from "axios";
 
@@ -63,7 +63,7 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
 
   return (
     <Modal visible={visible} animationType="slide">
-      <View style={styles.locationContainer}>
+      <View style={{ flex: 1}}>
         <Text style={styles.title}>Select Location</Text>
         <View style={styles.searchContainer}>
         <TextInput
@@ -138,16 +138,16 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
     setMapType((prev) => (prev === "standard" ? "satellite" : "standard"))
   }
 >
-  <Text style={styles.mapTypeToggleText}>
+  <Text style={styles.buttonText}>
     {mapType === "standard" ? "Satellite" : "Standard"}
   </Text>
 </TouchableOpacity>
 
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>
+          <TouchableOpacity style={[styles.actionButton, { backgroundColor: "gray" }]} onPress={onClose}>
             <Text style={styles.buttonText}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={handleSave}>
+          <TouchableOpacity style={[styles.actionButton, { backgroundColor: ambrasGreen }]} onPress={handleSave}>
             <Text style={styles.buttonText}>Save</Text>
           </TouchableOpacity>
         </View>

@@ -61,7 +61,7 @@ const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
       <View style={styles.modalContainer}>
         <View style={styles.flexRow}>
 
-        <Text style={styles.modalHeader}>Manage Photos</Text>
+        <Text style={styles.modalTitle}>Manage Photos</Text>
         <TouchableOpacity style={{
               alignItems: "center",
               padding: 0,
@@ -87,26 +87,26 @@ const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
                   style={styles.deleteButton}
                   onPress={() => handleDeletePhoto(item)}
                 >
-                  <Text style={styles.deleteButtonText}>×</Text>
+                  <Text style={styles.buttonText}>×</Text>
                 </TouchableOpacity>
               </View>
             );
           }}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No photos yet</Text>
+            <Text style={styles.statLabel}>No photos yet</Text>
           }
         />
 
 
         <View style={styles.buttonRow}>
           <TouchableOpacity
-            style={[styles.cancelButton, { flex: 1 }]}
+            style={[styles.actionButton, { backgroundColor: "gray"}]}
             onPress={onClose}
           >
             <Text style={styles.buttonText}>Close</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.saveButton, { flex: 1 }]}
+            style={[styles.actionButton, { backgroundColor: ambrasGreen }]}
             onPress={handleSave}
           >
             <Text style={styles.buttonText}>Save</Text>

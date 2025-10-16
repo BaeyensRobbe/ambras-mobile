@@ -2,17 +2,35 @@ import { VERCEL_URL} from '@env';
 
 export const fetchNextEvent = async () => {
   try {
-    const response = await fetch(`http://${VERCEL_URL}/events/next`);
+    const response = await fetch("http://" + VERCEL_URL + "/google-calendar/next");
+
     if (!response.ok) {
-      throw new Error("Network response was not ok");
+      throw new Error(`Failed to fetch next event: ${response.status}`);
     }
+
     const data = await response.json();
-    return data;
+
+    // Handle both array or object
+    const event = Array.isArray(data) ? data[0] : data;
+
+    if (!event) return null;
+
+    // Normalize it for the dashboard
+    return {
+      id: event.id,
+      title: event.summary || "Untitled event",
+      description: event.description || "",
+      start_time: event.start?.dateTime || event.start?.date,
+      end_time: event.end?.dateTime || event.end?.date,
+      location: event.location || "",
+      htmlLink: event.htmlLink || "",
+    };
   } catch (error) {
     console.error("Error fetching next event:", error);
-    throw error;
+    return null;
   }
-}
+};
+
 
 export const fetchUpcomingTasks = async () => {
   try {

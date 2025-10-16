@@ -33,36 +33,36 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
       </Text>
 
       <View>
-        <Text style={styles.subtitle}>Title: {item.title}</Text>
+        <Text style={styles.title}>Title: {item.title}</Text>
 
         {item.type === "password" && (
           <>
-            <Text style={styles.subtitle}>Username: {item.username}</Text>
-            <Text style={styles.subtitle}>
+            <Text style={styles.title}>Username: {item.username}</Text>
+            <Text style={styles.title}>
               Password: {item.password ? "••••••••" : ""}
             </Text>
           </>
         )}
 
         {item.type === "note" && (
-          <Text style={styles.subtitle}>Content: {item.content}</Text>
+          <Text style={styles.title}>Content: {item.content}</Text>
         )}
 
         {item.type === "link" && (
-          <Text style={styles.subtitle}>URL: {item.url}</Text>
+          <Text style={styles.title}>URL: {item.url}</Text>
         )}
       </View>
 
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+        <TouchableOpacity style={{ ...styles.actionButton, backgroundColor: "gray" }} onPress={onCancel}>
           <Text style={styles.buttonText}>Cancel</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={{ ...styles.cancelButton, backgroundColor: "red" }}
+          style={{ ...styles.actionButton, backgroundColor: "red" }}
           onPress={onConfirm}
         >
-          <Text style={styles.deleteButtonText}>Delete</Text>
+          <Text style={styles.buttonText}>Delete</Text>
         </TouchableOpacity>
       </View>
     </View>

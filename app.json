@@ -4,7 +4,7 @@
     "slug": "ambras-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/ambras-logo/android/mipmap-hdpi/ic_launcher.png",
+    "icon": "./assets/ambras/android/mipmap-hdpi/ic_launcher.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -20,7 +20,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/ambras-logo/android/mipmap-hdpi/ic_launcher_foreground.png",
+        "foregroundImage": "./assets/ambras/android/mipmap-hdpi/ic_launcher_foreground.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [

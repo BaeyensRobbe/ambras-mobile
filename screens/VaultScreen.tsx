@@ -204,7 +204,7 @@ useEffect(() => {
       </View>
 
       {item.type === "password" && <>
-        <Text style={vaultStyles.subtitle}>{item.username}</Text>
+        <Text style={vaultStyles.title}>{item.username}</Text>
         <Text style={vaultStyles.password}>{item.password ? "••••••••" : ""}</Text>
       </>}
 

@@ -124,7 +124,7 @@ const AddVaultItemModal: React.FC<Props> = ({ visible, onClose, onSubmit, defaul
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
         <View style={styles.modal}>
-          <Text style={styles.heading}>Add new {defaultType}</Text>
+          <Text style={styles.modalTitle}>Add new {defaultType}</Text>
           <ScrollView>
             <Text style={styles.label}>Title</Text>
             <TextInput style={styles.input} value={title} onChangeText={setTitle} />

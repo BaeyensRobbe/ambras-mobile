@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Modal, View, Text, Button, StyleSheet, TouchableOpacity, FlatList } from "react-native";
+import { styles } from "../styles";
 
 interface PickerInputModalProps<T> {
   visible: boolean;
@@ -27,7 +28,7 @@ export const PickerInputModal = <T,>({
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContainer}>
+        <View style={styles.pickerContainer}>
           <Text style={styles.title}>{title}</Text>
 
           <FlatList
@@ -39,7 +40,7 @@ export const PickerInputModal = <T,>({
                 onPress={() => handleSelect(item.value)}
               >
                 <Text style={[
-                  styles.optionText,
+                  styles.label,
                   item.value === selectedValue && styles.selectedOption
                 ]}>
                   {item.label}
@@ -54,38 +55,3 @@ export const PickerInputModal = <T,>({
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContainer: {
-    width: "85%",
-    maxHeight: "70%",
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 20,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 10,
-    color: "#006400",
-  },
-  optionButton: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-  },
-  optionText: {
-    fontSize: 16,
-    color: "#333",
-  },
-  selectedOption: {
-    color: "#006400",
-    fontWeight: "700",
-  },
-});

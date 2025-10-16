@@ -15,8 +15,8 @@ export const StatsCard: React.FC<StatsCardProps> = ({
 }) => {
   return (
     <View style={[styles.card, styles.card]}>
-      <Text style={[styles.cardTitle, { color: ambrasGreen }]}>{title}</Text>
-      <Text style={[styles.cardValue, { color }]}>{value}</Text>
+      <Text style={[styles.darkTitle, { color: ambrasGreen }]}>{title}</Text>
+      <Text style={[styles.statValue, { color }]}>{value}</Text>
     </View>
   );
 };

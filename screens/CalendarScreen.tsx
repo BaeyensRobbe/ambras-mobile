@@ -1,165 +1,115 @@
-// CalendarScreen.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { View, Dimensions, Alert } from "react-native";
-import { Calendar } from "react-native-big-calendar";
-import AppHeader from "../components/AppHeader"; 
-import AddItemModal from "../components/addTaskOrEventModal";
-import { addEvent, addTask } from "../api/events";
-import { VERCEL_URL } from "@env";
+import { Calendar, CalendarEvent as RNBCEvent } from "react-native-big-calendar";
+import AppHeader from "../components/AppHeader";
+import AddEventModal from "../components/addTaskOrEventModal";
+import { styles } from "../styles";
+import { fetchGoogleCalendarEvents } from "../api/google-calendar";
+import EventDetailsModal from "../components/EventDetailsModal";
 
-type CalendarEvent = {
+interface CalendarEvent extends RNBCEvent {
   id: string;
   title: string;
   start: Date;
   end: Date;
   description?: string;
   allDay?: boolean;
-  color?: string;
-};
-
-type Task = {
-  id: number;
-  title: string;
-  description?: string;
-  due_date: string;
-  reminder_time?: string;
-};
-
-type Event = {
-  id: number;
-  title: string;
-  description?: string;
-  start_time: string;
-  end_time: string;
-  all_day?: boolean;
+  colorId?: string;
   location?: string;
-  reminder_time?: string;
-  recurrence_rule?: string;
-  recurrence_end?: string;
-  status?: string;
-};
+}
 
-const CalendarScreen = () => {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+const ambrasGreen = "#1F3B28";
+
+const CalendarScreen: React.FC = () => {
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
-
-  //Modal visibility states
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalType, setModalType] = useState<"task" | "event">("task");
 
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [editModalVisible, setEditModalVisible] = useState(false);
 
+  const fetchEvents = useCallback(async () => {
+    try {
+      const data = await fetchGoogleCalendarEvents();
+      console.log("Fetched Google Calendar events:", data[0]);
+      const formatted: CalendarEvent[] = data.map((ev: any) => {
+        let start: Date;
+        let end: Date;
+        let allDay = false;
+        console.log("Raw event from Google:", ev);
 
-  // Fetch tasks and events
-  const fetchData = async () => {
-  try {
-    const tasksRes = await fetch(`http://${VERCEL_URL}/tasks`);
-    const tasksData = await tasksRes.json();
-    setTasks(tasksData);
+        if (ev.start?.date) {
+          start = new Date(ev.start.date); // start of day in local TZ
+          // subtract 1 ms is wrong; instead just subtract 1 day from Google-exclusive end
+          end = new Date(ev.end.date);
+          end.setDate(end.getDate() - 1); // Google end is exclusive, make it inclusive
+          end.setHours(23, 59, 59, 999); // optional, for display in calendar library
+          allDay = true;
+        } else {
+          start = new Date(ev.start.dateTime);
+          end = new Date(ev.end.dateTime);
+        }
+        console.log("Formatted event:", { id: ev.id, title: ev.summary, start, end, allDay, color: ev.colorId });
 
-    const eventsRes = await fetch(`http://${VERCEL_URL}/events`);
-    const eventsData = await eventsRes.json();
-    setEvents(eventsData);
-  } catch (err) {
-    console.error(err);
-  }
-};
-  useEffect(() => {
-    fetchData();
+        return {
+          id: ev.id,
+          title: ev.summary || "Untitled",
+          start,
+          end,
+          description: ev.description || "",
+          allDay,
+          color: ev.colorId ? `#${ev.colorId}` : ambrasGreen,
+          location: ev.location || "",
+        };
+      });
+      setEvents(formatted);
+    } catch (err) {
+      console.error("Error fetching Google Calendar events:", err);
+    }
   }, []);
 
-  // Merge tasks and events into calendar events
   useEffect(() => {
-    const merged: CalendarEvent[] = [
-      ...tasks.map((t) => ({
-        id: `task-${t.id}`,
-        title: t.title,
-        start: new Date(t.due_date),
-        end: new Date(t.due_date),
-        description: t.description,
-        color: "#006400",
-      })),
-      ...events.map((e) => ({
-        id: `event-${e.id}`,
-        title: e.title,
-        start: new Date(e.start_time),
-        end: new Date(e.end_time),
-        description: `${e.description || ""}${e.location ? `\nLocation: ${e.location}` : ""}`,
-        allDay: e.all_day,
-        color: e.all_day ? "#00AA00" : "#00FF00",
-      })),
-    ];
-
-    setCalendarEvents(merged);
-  }, [tasks, events]);
+    fetchEvents();
+  }, [fetchEvents]);
 
   const handleEventPress = (event: CalendarEvent) => {
-    Alert.alert(event.title, event.description || "");
-  };
-
-  const handlePrevMonth = () => {
-    const prev = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-    setCurrentDate(prev);
-  };
-
-  const handleNextMonth = () => {
-    const next = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
-    setCurrentDate(next);
-  };
-
-  const handleAddTask = () => {
-    setModalType("task");
-    setModalVisible(true);
-  };
-
-  const handleAddEvent = () => {
-    setModalType("event");
-    setModalVisible(true);
-  };
-
-  const handleSubmitItem = async (item: any) => {
-    if (modalType === "task") {
-      await addTask(item);
-    } else {
-      await addEvent(item);
-    }
-    await fetchData(); // Refresh data
-    setModalVisible(false);
-  };
+  setSelectedEvent(event);
+  setEditModalVisible(true);
+};
 
 
-  const monthTitle = currentDate.toLocaleString("default", { month: "long", year: "numeric" });
+  const handlePrevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  const handleNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  const handleAddEvent = () => setModalVisible(true);
 
   return (
     <View style={{ flex: 1 }}>
       <AppHeader
-        title={monthTitle}
+        title={currentDate.toLocaleString("default", { month: "long", year: "numeric" })}
         style={{ justifyContent: "space-between" }}
         leftButton={{ icon: "chevron-back", onPress: handlePrevMonth }}
-        rightButtons={[
-          { icon: "list", onPress: handleAddTask },
-          { icon: "add", onPress: handleAddEvent },
-          { icon: "chevron-forward", onPress: handleNextMonth },
-        ]}
+        rightButtons={[{ icon: "add", onPress: handleAddEvent }, { icon: "chevron-forward", onPress: handleNextMonth }]}
       />
 
       <Calendar
-        events={calendarEvents}
-        height={Dimensions.get("window").height - 60} // leave space for header
+        events={events}
+        height={Dimensions.get("window").height - 60}
         mode="month"
         swipeEnabled
         showTime
         date={currentDate}
         onPressEvent={handleEventPress}
-        onSwipeEnd={(setDate) => setCurrentDate(setDate)}
+        onSwipeEnd={(newDate) => setCurrentDate(newDate)}
+        eventCellStyle={(event) => ({ backgroundColor: event.color })}
       />
-      <AddItemModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSubmit={handleSubmitItem}
-        type={modalType}
-      />
+
+      <EventDetailsModal
+  visible={editModalVisible}
+  event={selectedEvent}
+  onClose={() => setEditModalVisible(false)}
+/>
+
+      <AddEventModal visible={modalVisible} onClose={() => setModalVisible(false)} onAdded={fetchEvents} />
     </View>
   );
 };
