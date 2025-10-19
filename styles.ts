@@ -38,7 +38,7 @@ export const styles = StyleSheet.create({
     marginBottom: 15,
     textAlign: "center",
   },
-  label: { fontSize: 14, marginTop: 10 },
+  label: { fontSize: 14, marginTop: 0 },
   buttonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
   // ────────────────────────────────
   // CONTAINERS

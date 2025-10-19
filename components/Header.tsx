@@ -33,10 +33,10 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 40,
+    paddingTop: 30,
     paddingHorizontal: 15,
     backgroundColor: "#1F3B28",
-    height: 80,
+    height: 70,
   },
   title: {
     flex: 1,

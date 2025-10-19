@@ -11,6 +11,8 @@ import { ApprovedSpot, Photo } from "../types/types";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { ambrasGreen } from "../styles";
+import ImageViewing from "react-native-image-viewing";
+
 
 interface SpotDetailsOverlayProps {
   spot: ApprovedSpot;
@@ -28,6 +30,8 @@ const SpotDetailsOverlay: React.FC<SpotDetailsOverlayProps> = ({
   onShowOnMap,
 }) => {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [isViewerVisible, setIsViewerVisible] = useState(false);
+
 
   const photos: Photo[] = spot?.photos || [];
 
@@ -93,12 +97,22 @@ const SpotDetailsOverlay: React.FC<SpotDetailsOverlayProps> = ({
         {/* Photo carousel */}
         {photos.length > 0 ? (
           <View style={styles.carouselContainer}>
-            <Image
-              source={{ uri: photos[currentPhotoIndex].url || undefined }}
-              style={styles.image}
-              resizeMode="cover"
-              cachePolicy="memory-disk"
-            />
+            <TouchableOpacity onPress={() => setIsViewerVisible(true)}>
+  <Image
+    source={{ uri: photos[currentPhotoIndex].url || undefined }}
+    style={styles.image}
+    resizeMode="cover"
+    cachePolicy="memory-disk"
+  />
+</TouchableOpacity>
+
+<ImageViewing
+  images={photos.map((p) => ({ uri: p.url }))}
+  imageIndex={currentPhotoIndex}
+  visible={isViewerVisible}
+  onRequestClose={() => setIsViewerVisible(false)}
+  backgroundColor="black"
+/>
 
             {photos.length > 1 && (
               <>
