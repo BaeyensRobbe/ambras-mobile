@@ -1,5 +1,5 @@
 import React from "react";
-import { ScrollView, Text, Touchable, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons"; // for icons
 import { useNavigation } from "@react-navigation/native";
 import TaskCard from "../components/TaskCard";

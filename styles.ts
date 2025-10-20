@@ -38,8 +38,10 @@ export const styles = StyleSheet.create({
     marginBottom: 15,
     textAlign: "center",
   },
+  darkSubtitle: { fontSize: 14, color: "black", fontWeight: "bold", marginBottom: 0 },
   label: { fontSize: 14, marginTop: 0 },
   buttonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  addEventText: { fontSize: 16, color: "black", fontWeight: "600", marginBottom: 10 },
   // ────────────────────────────────
   // CONTAINERS
   // ────────────────────────────────

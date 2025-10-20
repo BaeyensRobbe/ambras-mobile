@@ -28,28 +28,28 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
         />
       </View>
 
-      <Text style={styles.title}>
+      <Text style={{...styles.title, textAlign: "center", marginBottom: 20}}>
         Are you sure you want to delete the following {item.type}?
       </Text>
 
       <View>
-        <Text style={styles.title}>Title: {item.title}</Text>
+        <Text style={{...styles.title, color: "red", textAlign: "center"}}>{item.title}</Text>
 
         {item.type === "password" && (
           <>
-            <Text style={styles.title}>Username: {item.username}</Text>
-            <Text style={styles.title}>
+            <Text style={styles.subtitle}>Username: {item.username}</Text>
+            <Text style={styles.subtitle}>
               Password: {item.password ? "••••••••" : ""}
             </Text>
           </>
         )}
 
         {item.type === "note" && (
-          <Text style={styles.title}>Content: {item.content}</Text>
+          <Text style={styles.subtitle} numberOfLines={5}>Content: {item.content}</Text>
         )}
 
         {item.type === "link" && (
-          <Text style={styles.title}>URL: {item.url}</Text>
+          <Text style={styles.subtitle}>URL: {item.url}</Text>
         )}
       </View>
 

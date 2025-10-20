@@ -47,7 +47,7 @@ const SpotmapScreen: React.FC = () => {
   const userLocation = useContext(LocationContext);
 
   const mapRef = useRef<MapView>(null);
-  const [overlayPos, setOverlayPos] = useState<{x: number, y: number} | null>(null);
+  const [overlayPos, setOverlayPos] = useState<{ x: number, y: number } | null>(null);
 
   // Feature mapping
   const featureFieldMap: Record<string, keyof Spot> = {
@@ -100,20 +100,20 @@ const SpotmapScreen: React.FC = () => {
   }, [userLocation, spots]);
 
   useEffect(() => {
-  if (!spotsWithDistance.length) return;
+    if (!spotsWithDistance.length) return;
 
-  const newFiltered = spotsWithDistance.filter((spot) => {
-    if (selectedCategory !== "All" && spot.category !== selectedCategory) return false;
-    if (selectedCity !== "All Cities" && spot.city !== selectedCity) return false;
-    if (selectedFeatures.length > 0) {
-      const hasAll = selectedFeatures.every((f) => spot[featureFieldMap[f]]);
-      if (!hasAll) return false;
-    }
-    return true;
-  });
+    const newFiltered = spotsWithDistance.filter((spot) => {
+      if (selectedCategory !== "All" && spot.category !== selectedCategory) return false;
+      if (selectedCity !== "All Cities" && spot.city !== selectedCity) return false;
+      if (selectedFeatures.length > 0) {
+        const hasAll = selectedFeatures.every((f) => spot[featureFieldMap[f]]);
+        if (!hasAll) return false;
+      }
+      return true;
+    });
 
-  setFilteredSpots(newFiltered);
-}, [spotsWithDistance, selectedCategory, selectedCity, selectedFeatures]);
+    setFilteredSpots(newFiltered);
+  }, [spotsWithDistance, selectedCategory, selectedCity, selectedFeatures]);
 
   const getDistanceFromLatLonInKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371;
@@ -137,21 +137,21 @@ const SpotmapScreen: React.FC = () => {
       return true;
     });
   };
-  
-    const handleMarkerPress = async (spot: ApprovedSpot) => {
-  if (!mapRef.current) return;
 
-  const point = await mapRef.current.pointForCoordinate({
-    latitude: spot.lat,
-    longitude: spot.lng,
-  });
+  const handleMarkerPress = async (spot: ApprovedSpot) => {
+    if (!mapRef.current) return;
 
-  // Now you have the screen position
-  console.log("Screen coordinates:", point);
+    const point = await mapRef.current.pointForCoordinate({
+      latitude: spot.lat,
+      longitude: spot.lng,
+    });
 
-  setSelectedSpot(spot);
-  setOverlayPos(point); // save for your custom callout
-};
+    // Now you have the screen position
+    console.log("Screen coordinates:", point);
+
+    setSelectedSpot(spot);
+    setOverlayPos(point); // save for your custom callout
+  };
 
   // MAP / MARKERS
   const memoizedMarkers = useMemo(
@@ -216,24 +216,35 @@ const SpotmapScreen: React.FC = () => {
           </View> */}
 
           <View style={{ flexDirection: "column", gap: 15, marginTop: 10 }}>
-            <TouchableOpacity onPress={() => openPicker("category")} style={styles.filterRow}>
               <Text style={globalStyles.darkTitle}>Type</Text>
+            <TouchableOpacity onPress={() => openPicker("category")} style={styles.filterRow}>
               <Text style={globalStyles.darkTitle}>{getSelectedDisplay("category")} <Ionicons name="chevron-down" size={16} style={{ fontWeight: 600 }} /></Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => openPicker("city")} style={styles.filterRow}>
               <Text style={globalStyles.darkTitle}>City</Text>
-              <Text style={globalStyles.darkTitle}>{getSelectedDisplay("city")} <Ionicons name="chevron-down" size={16} style={{ fontWeight: 600 }} /></Text>
+
+            <TouchableOpacity onPress={() => openPicker("city")} style={styles.filterRow}>
+              <Text style={globalStyles.darkTitle}>{getSelectedDisplay("city")} </Text>
+            <Ionicons name="chevron-down" size={16} style={{ fontWeight: 600 }} />
             </TouchableOpacity>
 
             {/* Features as checkboxes */}
             <View style={{ marginTop: 10 }}>
               <Text style={globalStyles.darkTitle}>Features</Text>
               {Object.keys(featureFieldMap).map((f) => (
-                <View key={f} style={{ flexDirection: "row", alignItems: "center", marginVertical: 0 }}>
-                  <Switch value={selectedFeatures.includes(f)} onValueChange={() => toggleFeature(f)} />
-                  <Text style={{ marginLeft: 8 }}>{f}</Text>
-                </View>
+                <TouchableOpacity key={f} onPress={() => toggleFeature(f)}>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginVertical: 0, borderBottomWidth: 1, borderBottomColor: "#eeeeeeff" }}>
+                    <Text style={{fontSize: 16, marginVertical: 8}}>{featureFieldMap[f]}</Text>
+                    <Ionicons   
+                      name={selectedFeatures.includes(f) ? "checkmark-circle" : "radio-button-off"}
+                      size={30}
+                      color={selectedFeatures.includes(f) ? ambrasGreen : "#999"}
+                    />
+
+                    {/* <Switch value={selectedFeatures.includes(f)} onValueChange={() => toggleFeature(f)} />
+                  <Text style={{ marginLeft: 8 }}>{f}</Text> */}
+                  </View>
+                </TouchableOpacity>
               ))}
             </View>
           </View>
@@ -270,18 +281,18 @@ const SpotmapScreen: React.FC = () => {
 
       {overlayPos && selectedSpot && (
         <View style={{ zIndex: -1, position: "absolute", left: width / 2 - 75, top: height / 2 - 75, width: 150, backgroundColor: "white", padding: 8, borderRadius: 8, borderColor: ambrasGreen, borderWidth: 2 }}>
-        <TouchableOpacity onPress={() => {setShowSpotDetails(true)}}>
-          <TouchableOpacity
-  onPress={() => {
-    setOverlayPos(null);
-    setSelectedSpot(null);
-  }}
-  style={{ position: "absolute", top: 4, right: 4, zIndex: 10 }}
->
-  <Ionicons name="close" size={16} />
-</TouchableOpacity>
-          <Text style={{ fontWeight: "bold", textAlign: "center" }}>{selectedSpot.name}</Text>
-          <Image source={{ uri: selectedSpot.photos[0]?.url }} style={{ width: "100%", height: 80, borderRadius: 6, marginTop: 4 }} cachePolicy="memory-disk" />
+          <TouchableOpacity onPress={() => { setShowSpotDetails(true) }}>
+            <TouchableOpacity
+              onPress={() => {
+                setOverlayPos(null);
+                setSelectedSpot(null);
+              }}
+              style={{ position: "absolute", top: 4, right: 4, zIndex: 10 }}
+            >
+              <Ionicons name="close" size={16} />
+            </TouchableOpacity>
+            <Text style={{ fontWeight: "bold", textAlign: "center" }}>{selectedSpot.name}</Text>
+            <Image source={{ uri: selectedSpot.photos[0]?.url }} style={{ width: "100%", height: 80, borderRadius: 6, marginTop: 4 }} cachePolicy="memory-disk" />
           </TouchableOpacity>
         </View>
       )}
@@ -291,7 +302,7 @@ const SpotmapScreen: React.FC = () => {
           <Text style={{ ...globalStyles.title, color: "white", marginBottom: 20 }}>Nearby spots</Text>
           <FlatList
             data={filteredSpots}
-            key={filteredSpots.map(s => s.id).join(',')} 
+            key={filteredSpots.map(s => s.id).join(',')}
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderSpotCard}
             horizontal
@@ -310,7 +321,7 @@ const styles = StyleSheet.create({
   map: { width, height, zIndex: -2 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   filterOverlay: { position: "absolute", top: 70, width: "100%", backgroundColor: "white", padding: 10, borderRadius: 8, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 5, elevation: 5 },
-  filterRow: { ...globalStyles.flexRow, borderBottomWidth: 1, borderBottomColor: ambrasGreen, paddingBottom: 6, justifyContent: "space-between" },
+  filterRow: { ...globalStyles.flexRow, borderWidth: 1, borderBottomWidth: 1, borderBottomColor: ambrasGreen, padding: 6, justifyContent: "space-between"},
   floatingButtonContainer: { position: "absolute", alignSelf: "center", zIndex: 10 },
   floatingButton: { width: 140, height: 30, backgroundColor: ambrasGreen, borderTopLeftRadius: 20, borderTopRightRadius: 20, textAlign: "center", textAlignVertical: "center" },
   listContainer: { position: "absolute", bottom: 0, left: 0, right: 0, height: height * 0.4, backgroundColor: ambrasGreen, padding: 10 },

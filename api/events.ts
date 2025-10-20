@@ -2,7 +2,7 @@ import { VERCEL_URL} from '@env';
 
 export const fetchNextEvent = async () => {
   try {
-    const response = await fetch("http://" + VERCEL_URL + "/google-calendar/next");
+    const response = await fetch("https://" + VERCEL_URL + "/google-calendar/next");
 
     if (!response.ok) {
       throw new Error(`Failed to fetch next event: ${response.status}`);

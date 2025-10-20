@@ -19,7 +19,6 @@ export const fetchSpots = async (type: string) => {
     console.log("Fetching spot suggestions from:", url);
     const res = await fetch(url);
     if (!res.ok) {
-      console.error("Error response:", res.status, res.statusText);
       throw new Error("Failed to fetch spot suggestions");
     }
     const data = await res.json();

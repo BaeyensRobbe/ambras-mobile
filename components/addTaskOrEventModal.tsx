@@ -14,6 +14,7 @@ import {
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { ambrasGreen, styles } from "../styles";
 import { addGoogleCalendarEvent } from "../api/google-calendar";
+import { Ionicons } from "@expo/vector-icons";
 
 type AddEventModalProps = {
   visible: boolean;
@@ -72,44 +73,44 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ visible, onClose, onAdded
     );
 
   const handleSave = async () => {
-  if (!title.trim()) {
-    Alert.alert("Validation Error", "Title is required.");
-    return;
-  }
+    if (!title.trim()) {
+      Alert.alert("Validation Error", "Title is required.");
+      return;
+    }
 
-  let start: Date, end: Date;
-  if (allDay) {
-  // Keep the exact calendar date, independent of timezone
-  start = new Date(Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()));
-  end = new Date(Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate()));
+    let start: Date, end: Date;
+    if (allDay) {
+      // Keep the exact calendar date, independent of timezone
+      start = new Date(Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()));
+      end = new Date(Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate()));
 
-  // Google Calendar expects exclusive end, so add 1 day
-  end.setUTCDate(end.getUTCDate());
-} else {
-    start = combineDateTime(startDate, startTime);
-    end = combineDateTime(endDate, endTime);
-  }
-  console.log("Combined start:", start, "end:", end);
-  try {
-    await addGoogleCalendarEvent({
-      title,
-      description,
-      start,
-      end,
-      location,
-      allDay,
-      recurrence: recurrence !== "None" ? recurrence : undefined,
-      recurrenceEnd: recurrence !== "None" ? recurrenceEnd : undefined,
-      color: colorId,
-    });
-    Alert.alert("Success", "Event added to Google Calendar!");
-    onAdded?.();
-    handleClose();
-  } catch (err) {
-    console.error(err);
-    Alert.alert("Error", "Could not add event to Google Calendar.");
-  }
-};
+      // Google Calendar expects exclusive end, so add 1 day
+      end.setUTCDate(end.getUTCDate());
+    } else {
+      start = combineDateTime(startDate, startTime);
+      end = combineDateTime(endDate, endTime);
+    }
+    console.log("Combined start:", start, "end:", end);
+    try {
+      await addGoogleCalendarEvent({
+        title,
+        description,
+        start,
+        end,
+        location,
+        allDay,
+        recurrence: recurrence !== "None" ? recurrence : undefined,
+        recurrenceEnd: recurrence !== "None" ? recurrenceEnd : undefined,
+        color: colorId,
+      });
+      Alert.alert("Success", "Event added to Google Calendar!");
+      onAdded?.();
+      handleClose();
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Could not add event to Google Calendar.");
+    }
+  };
 
 
   const handleClose = () => {
@@ -127,101 +128,158 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ visible, onClose, onAdded
     onClose();
   };
 
-  const handleDateChange = (event: any, selected: Date | undefined, setter: (d: Date) => void, hide: () => void) => {
+  const formatDate = (date: Date) =>
+  date.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+  const handleDateChange = (
+    event: any,
+    selected: Date | undefined,
+    setter: (d: Date) => void,
+    hide: () => void,
+    isStartDate: boolean = false
+  ) => {
     hide();
     if (event.type === "dismissed") return;
-    if (selected) setter(selected);
+    if (!selected) return;
+
+    if (isStartDate) {
+      // calculate delta in ms
+      const delta = selected.getTime() - startDate.getTime();
+
+      setter(selected);
+      setEndDate(new Date(endDate.getTime() + delta));
+    } else {
+      setter(selected);
+    }
   };
+
+  const handleTimeChange = (
+    event: any,
+    selected: Date | undefined,
+    setter: (d: Date) => void,
+    hide: () => void,
+    isStartTime: boolean = false
+  ) => {
+    hide();
+    if (event.type === "dismissed") return;
+    if (!selected) return;
+
+    if (isStartTime) {
+      // calculate delta in ms
+      const delta = selected.getTime() - startTime.getTime();
+
+      setter(selected);
+      setEndTime(new Date(endTime.getTime() + delta));
+    } else {
+      setter(selected);
+    }
+  };
+
+
+
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, justifyContent: "flex-end" }}>
-        <View style={styles.modalContainer}>
+        <View style={{ ...styles.modalContainer, padding: 20 }}>
           <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
             <TextInput
               ref={titleInputRef}
-              style={{ fontSize: 22, fontWeight: "600", marginBottom: 10 }}
+              style={{ fontSize: 22, fontWeight: "600", marginBottom: 20, borderBottomWidth: 2 }}
               placeholder="Add title"
+              placeholderTextColor={"gray"}
               value={title}
               onChangeText={setTitle}
             />
 
-            <TextInput style={[styles.input, { marginBottom: 10 }]} placeholder="Description" value={description} onChangeText={setDescription} />
 
-            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
-              <Text style={{ marginRight: 10 }}>All Day</Text>
-              <Switch value={allDay} onValueChange={setAllDay} />
-            </View>
-
-            {/* Start */}
-            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }}>
-              <Text>Start</Text>
-              <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
-                <Text>{startDate.toLocaleDateString()}</Text>
+            <View style={{ marginBottom: 10, borderBottomWidth: 1, borderBottomColor: "#ccc" }}>
+              <TouchableOpacity onPress={() => { setAllDay(!allDay) }}>
+                <View style={{ ...styles.flexRow, marginBottom: 10 }}>
+                  <Text style={styles.addEventText}>All day event</Text>
+                  <Ionicons
+                    name={allDay ? "checkmark-circle" : "radio-button-off"}
+                    size={30}
+                    color={allDay ? ambrasGreen : "#999"}
+                    style={{ marginTop: -5 }}
+                  />
+                </View>
               </TouchableOpacity>
-              {!allDay && (
-                <TouchableOpacity onPress={() => setShowStartTimePicker(true)}>
-                  <Text>
-                    {startTime.getHours().toString().padStart(2, "0")}:{startTime.getMinutes().toString().padStart(2, "0")}
-                  </Text>
-                </TouchableOpacity>
+
+             <View style={{ flexDirection: "column", gap: 10 }}>
+  <View style={styles.flexRow}>
+    <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
+      <Text style={styles.addEventText}>{formatDate(startDate)}</Text>
+    </TouchableOpacity>
+    {!allDay && (
+      <TouchableOpacity onPress={() => setShowStartTimePicker(true)}>
+        <Text style={styles.addEventText}>
+          {startTime.getHours().toString().padStart(2, "0")}:
+          {startTime.getMinutes().toString().padStart(2, "0")}
+        </Text>
+      </TouchableOpacity>
+    )}
+  </View>
+
+  <View style={styles.flexRow}>
+    <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
+      <Text style={styles.addEventText}>{formatDate(endDate)}</Text>
+    </TouchableOpacity>
+    {!allDay && (
+      <TouchableOpacity onPress={() => setShowEndTimePicker(true)}>
+        <Text style={styles.addEventText}>
+          {endTime.getHours().toString().padStart(2, "0")}:
+          {endTime.getMinutes().toString().padStart(2, "0")}
+        </Text>
+      </TouchableOpacity>
+    )}
+  </View>
+</View>
+              {showStartDatePicker && (
+                <DateTimePicker
+                  value={startDate}
+                  mode="date"
+                  display="default"
+                  onChange={(e, d) => handleDateChange(e, d, setStartDate, () => setShowStartDatePicker(false), true)}
+                />
               )}
-            </View>
-
-            {showStartDatePicker && (
-              <DateTimePicker
-                value={startDate}
-                mode="date"
-                display="default"
-                onChange={(e, d) => handleDateChange(e, d, setStartDate, () => setShowStartDatePicker(false))}
-              />
-            )}
-            {showStartTimePicker && (
-              <DateTimePicker
-                value={startTime}
-                mode="time"
-                display="default"
-                onChange={(e, d) => handleDateChange(e, d, setStartTime, () => setShowStartTimePicker(false))}
-              />
-            )}
-
-            {/* End */}
-            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }}>
-              <Text>End</Text>
-              <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
-                <Text>{allDay ? new Date(endDate.getTime() - 1).toLocaleDateString() : endDate.toLocaleDateString()}</Text>
-              </TouchableOpacity>
-              {!allDay && (
-                <TouchableOpacity onPress={() => setShowEndTimePicker(true)}>
-                  <Text>
-                    {endTime.getHours().toString().padStart(2, "0")}:{endTime.getMinutes().toString().padStart(2, "0")}
-                  </Text>
-                </TouchableOpacity>
+             {showStartTimePicker && (
+               <DateTimePicker
+                 value={startTime}
+                 mode="time"
+                 display="default"
+                 onChange={(e, d) =>
+                   handleTimeChange(e, d, setStartTime, () => setShowStartTimePicker(false), true)
+                 }
+                 />
+                )}
+              {showEndDatePicker && (
+                <DateTimePicker
+                  value={endDate}
+                  mode="date"
+                  display="default"
+                  onChange={(e, d) => handleDateChange(e, d, setEndDate, () => setShowEndDatePicker(false), false)}
+                />
               )}
-            </View>
-
-            {showEndDatePicker && (
-              <DateTimePicker
-                value={endDate}
-                mode="date"
-                display="default"
-                onChange={(e, d) => handleDateChange(e, d, setEndDate, () => setShowEndDatePicker(false))}
+              {showEndTimePicker && (
+                <DateTimePicker
+                  value={endTime}
+                  mode="time"
+                  display="default"
+                  onChange={(e, d) =>
+                    handleTimeChange(e, d, setEndTime, () => setShowEndTimePicker(false), false)
+                }
               />
-            )}
-            {showEndTimePicker && (
-              <DateTimePicker
-                value={endTime}
-                mode="time"
-                display="default"
-                onChange={(e, d) => handleDateChange(e, d, setEndTime, () => setShowEndTimePicker(false))}
-              />
-            )}
+              )}
 
-            <TextInput style={[styles.input, { marginBottom: 10 }]} placeholder="Location" value={location} onChangeText={setLocation} />
-
-            {/* Recurrence */}
+              {/* Recurrence */}
             <TouchableOpacity
-              style={{ marginBottom: 10 }}
+              style={{ marginBottom: 10, marginTop: 10 }}
               onPress={() =>
                 Alert.alert(
                   "Recurrence",
@@ -230,7 +288,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ visible, onClose, onAdded
                 )
               }
             >
-              <Text>Recurrence: {recurrence}</Text>
+              <Text style={styles.addEventText}>Recurrence: {recurrence}</Text>
             </TouchableOpacity>
 
             {recurrence !== "None" && (
@@ -246,6 +304,14 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ visible, onClose, onAdded
                 onChange={(e, d) => handleDateChange(e, d, setRecurrenceEnd, () => setShowRecurrenceEndPicker(false))}
               />
             )}
+
+            </View>
+
+            <TextInput style={[styles.input, { marginBottom: 10 }]} placeholder="Description" placeholderTextColor={"gray"} value={description} onChangeText={setDescription} />
+
+            <TextInput style={[styles.input, { marginBottom: 10 }]} placeholder="Location" placeholderTextColor={"gray"} value={location} onChangeText={setLocation} />
+
+            
 
             {/* Color */}
             <View style={{ flexDirection: "row", marginBottom: 10 }}>

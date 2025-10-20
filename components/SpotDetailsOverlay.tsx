@@ -38,7 +38,7 @@ const SpotDetailsOverlay: React.FC<SpotDetailsOverlayProps> = ({
   // Lazy preload current, previous, next images
   useEffect(() => {
   if (!visible || photos.length === 0) return;
-
+    console.log(photos)
   const preloadIndexes = [
     currentPhotoIndex,
     (currentPhotoIndex + 1) % photos.length,
@@ -99,7 +99,7 @@ const SpotDetailsOverlay: React.FC<SpotDetailsOverlayProps> = ({
           <View style={styles.carouselContainer}>
             <TouchableOpacity onPress={() => setIsViewerVisible(true)}>
   <Image
-    source={{ uri: photos[currentPhotoIndex].url || undefined }}
+    source={{ uri: `${photos[currentPhotoIndex].url}?v=${Date.now()}` || undefined }}
     style={styles.image}
     resizeMode="cover"
     cachePolicy="memory-disk"

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { Photo } from "../types/types";
 import { styles } from "../styles";
-import { Image } from "expo-image"
+import { Image } from "expo-image";
 
 const { width } = Dimensions.get("window");
 const IMAGE_SIZE = width * 0.42; // two per row, with spacing
@@ -22,35 +22,22 @@ export const SortablePhotos: React.FC<SortablePhotosProps> = ({
   photos,
   setPhotos,
 }) => {
-  const positions = useRef<Animated.ValueXY[]>([]).current;
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (photos.length > positions.length) {
-      for (let i = positions.length; i < photos.length; i++) {
-        positions[i] = new Animated.ValueXY({ x: 0, y: 0 });
-      }
-    } else if (photos.length < positions.length) {
-      positions.splice(photos.length);
-    }
-  }, [photos]);
+  // Map positions by stable photoId
+  const positions = useRef<Map<string, Animated.ValueXY>>(new Map()).current;
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const movePhoto = (from: number, to: number) => {
-  if (from === to) return;
-  
-  setPhotos(prev => {
-    const updated = [...prev];
-    console.log("Current photo order before move:", updated.map(p => p.id || p.url));
-    const [moved] = updated.splice(from, 1);
-    updated.splice(to, 0, moved);
-    console.log(`Moved photo from index ${from} to ${to}`);
-    console.log("Updated photo order:", updated.map(p => p.id || p.url));
-    return updated;
-  });
-};
+    if (from === to) return;
+
+    setPhotos((prev) => {
+      const updated = [...prev];
+      const [moved] = updated.splice(from, 1);
+      updated.splice(to, 0, moved);
+      return updated;
+    });
+  };
 
   const getIndexFromGesture = (dy: number, dx: number, from: number) => {
-    // Estimate how many "slots" we moved vertically or horizontally
     const rowLength = 2;
     const rowHeight = IMAGE_SIZE + 15;
     const colWidth = IMAGE_SIZE + 15;
@@ -62,23 +49,31 @@ export const SortablePhotos: React.FC<SortablePhotosProps> = ({
     return Math.max(0, Math.min(photos.length - 1, newIndex));
   };
 
-  const responders = photos.map((_, index) =>
-    PanResponder.create({
+  const responders = photos.map((photo, index) => {
+    // Ensure stable id
+    const photoId = photo.id || `photo-${index}`;
+
+    // Initialize position if missing
+    if (!positions.has(photoId)) {
+      positions.set(photoId, new Animated.ValueXY({ x: 0, y: 0 }));
+    }
+
+    return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderGrant: () => {
-        setActiveIndex(index);
-        Animated.spring(positions[index], {
+        setActiveId(photoId);
+        Animated.spring(positions.get(photoId)!, {
           toValue: { x: 0, y: 0 },
           useNativeDriver: false,
         }).start();
       },
-      onPanResponderMove: (evt, gesture) => {
-        const pos = positions[index];
+      onPanResponderMove: (_, gesture) => {
+        const pos = positions.get(photoId);
         if (!pos) return;
         pos.setValue({ x: gesture.dx, y: gesture.dy });
       },
       onPanResponderRelease: (_, gesture) => {
-        const pos = positions[index];
+        const pos = positions.get(photoId);
         if (!pos) return;
 
         const newIndex = getIndexFromGesture(gesture.dy, gesture.dx, index);
@@ -89,10 +84,10 @@ export const SortablePhotos: React.FC<SortablePhotosProps> = ({
           friction: 6,
           tension: 50,
           useNativeDriver: false,
-        }).start(() => setActiveIndex(null));
+        }).start(() => setActiveId(null));
       },
-    })
-  );
+    });
+  });
 
   return (
     <View style={{ marginTop: 10 }}>
@@ -107,12 +102,13 @@ export const SortablePhotos: React.FC<SortablePhotosProps> = ({
         }}
       >
         {photos.map((photo, index) => {
-          const pos = positions[index] || new Animated.ValueXY({ x: 0, y: 0 });
-          const isActive = activeIndex === index;
+          const photoId = photo.id || `photo-${index}`;
+          const pos = positions.get(photoId)!; // guaranteed to exist
+          const isActive = activeId === photoId;
 
           return (
             <Animated.View
-              key={ photo.id || index}
+              key={photoId}
               style={{
                 transform: pos.getTranslateTransform(),
                 marginBottom: 15,
