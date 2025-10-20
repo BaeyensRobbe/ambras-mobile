@@ -246,7 +246,7 @@ const SpotmapScreen: React.FC = () => {
         onSelect={(selected) => setSelectedFeatures(selected)}
         title="Select Features"
       />
-      
+
       <MapView
         ref={mapRef}
         style={styles.map}
@@ -275,6 +275,40 @@ const SpotmapScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       )}
+
+<TouchableOpacity
+  style={{
+    position: "absolute",
+    bottom: showList ? height * 0.4  : 0, // moves up when list is open
+    left: width / 2 - 60, // center horizontally, assuming button width ~60
+    zIndex: 30,
+  }}
+  onPress={() => setShowList(!showList)}
+  activeOpacity={0.8}
+>
+  <View
+    style={{
+      width: 120,
+      height: 35,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      backgroundColor: ambrasGreen,
+      justifyContent: "center",
+      alignItems: "center",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 3,
+      elevation: 5,
+    }}
+  >
+    <Ionicons
+      name={showList ? "chevron-down" : "chevron-up"}
+      size={24}
+      color="white"
+    />
+  </View>
+</TouchableOpacity>
 
       {showList && (
         <View style={styles.listContainer}>

@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     height: 40,
     marginBottom: 10,
-    marginTop: 10,
+    marginTop: 30,
   },
   input: { flex: 1, fontSize: 16, height: 40 },
   spotRow: {
