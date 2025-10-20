@@ -1,13 +1,19 @@
-import { View, Text, StyleSheet, Dimensions, FlatList, TouchableOpacity, Switch } from "react-native";
+import React, { useRef, useState, useEffect, useContext, useMemo } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Dimensions,
+  FlatList,
+  TouchableOpacity,
+  ScrollView,
+} from "react-native";
 import { Image } from "expo-image";
-import { useRef } from "react";
 import MapView, { PROVIDER_GOOGLE } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
-import { useContext, useEffect, useMemo, useState } from "react";
 import { fetchSpots } from "../api/spots";
 import { simulateProgress } from "../utils/toastHelperFunctions";
 import Toast from "react-native-toast-message";
-import Header from "../components/Header";
 import { LocationContext } from "../components/location/LocationContext";
 import { SpotMarker } from "../components/spotmap/Marker";
 import { ApprovedSpot, Category, Spot } from "../types/types";
@@ -15,6 +21,8 @@ import { ambrasGreen, styles as globalStyles } from "../styles";
 import SpotDetailsOverlay from "../components/SpotDetailsOverlay";
 import { PickerInputModal } from "../components/PickerInputModal";
 import { fetchCitiesOnly } from "../utils/spotHelperFunctions";
+import SpotSearchModal from "../components/spotmap/SpotSearchModal";
+import MultiSelectModal from "../components/MultiSelectModal";
 
 const { width, height } = Dimensions.get("window");
 
@@ -27,12 +35,11 @@ const SpotmapScreen: React.FC = () => {
   const [spotsWithDistance, setSpotsWithDistance] = useState<SpotWithDistance[]>([]);
   const [showList, setShowList] = useState(false);
   const [mapReady, setMapReady] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [selectedSpot, setSelectedSpot] = useState<ApprovedSpot | null>(null);
   const [showSpotDetails, setShowSpotDetails] = useState(false);
   const [filteredSpots, setFilteredSpots] = useState<SpotWithDistance[]>([]);
-
 
   // FILTER STATES
   const [selectedCategory, setSelectedCategory] = useState<Category | "All">("All");
@@ -46,8 +53,11 @@ const SpotmapScreen: React.FC = () => {
   const [cities, setCities] = useState<string[]>([]);
   const userLocation = useContext(LocationContext);
 
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
+  const [showFeatureModal, setShowFeatureModal] = useState(false);
+
   const mapRef = useRef<MapView>(null);
-  const [overlayPos, setOverlayPos] = useState<{ x: number, y: number } | null>(null);
+  const [overlayPos, setOverlayPos] = useState<{ x: number; y: number } | null>(null);
 
   // Feature mapping
   const featureFieldMap: Record<string, keyof Spot> = {
@@ -74,8 +84,7 @@ const SpotmapScreen: React.FC = () => {
       setSpots(data);
 
       const fetchedCities = await fetchCitiesOnly();
-      const uniqueCities = [...new Set(fetchedCities)];
-      setCities(uniqueCities);
+      setCities([...new Set(fetchedCities)]);
 
       Toast.hide();
       Toast.show({ type: "success", text1: "Spots loaded successfully" });
@@ -100,20 +109,8 @@ const SpotmapScreen: React.FC = () => {
   }, [userLocation, spots]);
 
   useEffect(() => {
-    if (!spotsWithDistance.length) return;
-
-    const newFiltered = spotsWithDistance.filter((spot) => {
-      if (selectedCategory !== "All" && spot.category !== selectedCategory) return false;
-      if (selectedCity !== "All Cities" && spot.city !== selectedCity) return false;
-      if (selectedFeatures.length > 0) {
-        const hasAll = selectedFeatures.every((f) => spot[featureFieldMap[f]]);
-        if (!hasAll) return false;
-      }
-      return true;
-    });
-
-    setFilteredSpots(newFiltered);
-  }, [spotsWithDistance, selectedCategory, selectedCity, selectedFeatures]);
+    filterSpots();
+  }, [spotsWithDistance, selectedCategory, selectedCity, selectedFeatures, searchQuery]);
 
   const getDistanceFromLatLonInKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371;
@@ -125,47 +122,28 @@ const SpotmapScreen: React.FC = () => {
   };
   const deg2rad = (deg: number) => deg * (Math.PI / 180);
 
-  // FILTERED SPOTS
-  const getFilteredSpots = () => {
-    return spotsWithDistance.filter((spot) => {
+  const filterSpots = () => {
+    const newFiltered = spotsWithDistance.filter((spot) => {
       if (selectedCategory !== "All" && spot.category !== selectedCategory) return false;
       if (selectedCity !== "All Cities" && spot.city !== selectedCity) return false;
       if (selectedFeatures.length > 0) {
         const hasAll = selectedFeatures.every((f) => spot[featureFieldMap[f]]);
         if (!hasAll) return false;
       }
+      if (searchQuery && !spot.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
     });
+    setFilteredSpots(newFiltered);
   };
 
   const handleMarkerPress = async (spot: ApprovedSpot) => {
     if (!mapRef.current) return;
-
     const point = await mapRef.current.pointForCoordinate({
       latitude: spot.lat,
       longitude: spot.lng,
     });
-
-    // Now you have the screen position
-    console.log("Screen coordinates:", point);
-
     setSelectedSpot(spot);
-    setOverlayPos(point); // save for your custom callout
-  };
-
-  // MAP / MARKERS
-  const memoizedMarkers = useMemo(
-    () => filteredSpots.map((spot) => <SpotMarker key={spot.id} spot={spot} onPress={handleMarkerPress} />),
-    [filteredSpots]
-  );
-
-  if (!userLocation) return <View style={styles.center}><Text>Fetching your location...</Text></View>;
-
-  const initialRegion = {
-    latitude: userLocation.latitude || 50.8798,
-    longitude: userLocation.longitude || 4.7005,
-    latitudeDelta: 0.05,
-    longitudeDelta: 0.05,
+    setOverlayPos(point);
   };
 
   // PICKER HANDLING
@@ -177,7 +155,7 @@ const SpotmapScreen: React.FC = () => {
   const handlePickerSelect = (value: any) => {
     if (activeField === "category") setSelectedCategory(value);
     if (activeField === "city") setSelectedCity(value);
-    setShowPickerInputModal(false); // close modal
+    setShowPickerInputModal(false);
   };
 
   const toggleFeature = (feature: string) => {
@@ -192,7 +170,6 @@ const SpotmapScreen: React.FC = () => {
     return "";
   };
 
-  // SPOT CARD
   const renderSpotCard = ({ item }: { item: SpotWithDistance }) => (
     <TouchableOpacity style={styles.spotCard} onPress={() => { setSelectedSpot(item); setShowSpotDetails(true); }}>
       <Text style={styles.spotName}>{item.isFavorite ? "★ " : ""}{item.name}</Text>
@@ -201,92 +178,94 @@ const SpotmapScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
+  const initialRegion = {
+    latitude: userLocation?.latitude || 50.8798,
+    longitude: userLocation?.longitude || 4.7005,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  };
+
+  const memoizedMarkers = useMemo(
+    () => filteredSpots.map((spot) => <SpotMarker key={spot.id} spot={spot} onPress={handleMarkerPress} />),
+    [filteredSpots]
+  );
+
   return (
     <View style={{ flex: 1 }}>
-      <Header title="Spotmap" rightButton={{ icon: "filter", onPress: () => setShowFilters(!showFilters) }} />
-      <MapView ref={mapRef} style={styles.map} provider={PROVIDER_GOOGLE} onRegionChangeStart={() => setSelectedSpot(null)} initialRegion={initialRegion} showsUserLocation onMapReady={() => setMapReady(true)}>
+      {/* Search bar + filters */}
+      <View style={styles.searchContainer}>
+        <TouchableOpacity
+          style={styles.searchBar}
+          onPress={() => setSearchModalVisible(true)}
+        >
+          <Ionicons name="search" size={20} style={{ marginRight: 8 }} />
+          <Text style={{ color: "#888" }}>Search spots...</Text>
+        </TouchableOpacity>
+
+        {/* Filters row */}
+        <ScrollView horizontal style={styles.filtersRow} contentContainerStyle={{ gap: 10, alignItems: "center" }}>
+          <TouchableOpacity onPress={() => openPicker("category")} style={styles.filterRow}>
+            <Text style={styles.filterText}>{getSelectedDisplay("category")} <Ionicons name="chevron-down" size={16} /></Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => openPicker("city")} style={styles.filterRow}>
+            <Text style={styles.filterText}>{getSelectedDisplay("city")} <Ionicons name="chevron-down" size={16} /></Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowFeatureModal(true)} style={styles.filterRow}>
+            <Text style={styles.filterText}>
+              {selectedFeatures.length > 0 ? `${selectedFeatures.length} Features` : "Select Features"}{" "}
+              <Ionicons name="chevron-down" size={16} />
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+
+      <SpotSearchModal
+        visible={searchModalVisible}
+        onClose={() => setSearchModalVisible(false)}
+        spots={spotsWithDistance}
+        onSelectSpot={(spot) => {
+          setSearchModalVisible(false);
+          mapRef.current?.animateToRegion(
+            {
+              latitude: spot.lat,
+              longitude: spot.lng,
+              latitudeDelta: 0.02,
+              longitudeDelta: 0.02,
+            },
+            500
+          );
+          setTimeout(() => handleMarkerPress(spot as ApprovedSpot), 600);
+        }}
+      />
+
+      <MultiSelectModal
+        visible={showFeatureModal}
+        onClose={() => setShowFeatureModal(false)}
+        options={Object.keys(featureFieldMap)}
+        selected={selectedFeatures}
+        onSelect={(selected) => setSelectedFeatures(selected)}
+        title="Select Features"
+      />
+      
+      <MapView
+        ref={mapRef}
+        style={styles.map}
+        provider={PROVIDER_GOOGLE}
+        initialRegion={initialRegion}
+        showsUserLocation
+        showsCompass={true}
+        showsMyLocationButton={true}
+        onRegionChangeStart={() => setSelectedSpot(null)}
+        onMapReady={() => setMapReady(true)}
+      >
         {mapReady && memoizedMarkers}
       </MapView>
 
-      {showFilters && (
-        <View style={styles.filterOverlay}>
-          {/* <View style={globalStyles.flexRow}>
-            <Text style={{...globalStyles.modalTitle, marginBottom: 5}}>Filters</Text>
-            <Ionicons name="close" size={24} onPress={() => setShowFilters(false)} />
-          </View> */}
-
-          <View style={{ flexDirection: "column", gap: 15, marginTop: 10 }}>
-              <Text style={globalStyles.darkTitle}>Type</Text>
-            <TouchableOpacity onPress={() => openPicker("category")} style={styles.filterRow}>
-              <Text style={globalStyles.darkTitle}>{getSelectedDisplay("category")} <Ionicons name="chevron-down" size={16} style={{ fontWeight: 600 }} /></Text>
-            </TouchableOpacity>
-
-              <Text style={globalStyles.darkTitle}>City</Text>
-
-            <TouchableOpacity onPress={() => openPicker("city")} style={styles.filterRow}>
-              <Text style={globalStyles.darkTitle}>{getSelectedDisplay("city")} </Text>
-            <Ionicons name="chevron-down" size={16} style={{ fontWeight: 600 }} />
-            </TouchableOpacity>
-
-            {/* Features as checkboxes */}
-            <View style={{ marginTop: 10 }}>
-              <Text style={globalStyles.darkTitle}>Features</Text>
-              {Object.keys(featureFieldMap).map((f) => (
-                <TouchableOpacity key={f} onPress={() => toggleFeature(f)}>
-                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginVertical: 0, borderBottomWidth: 1, borderBottomColor: "#eeeeeeff" }}>
-                    <Text style={{fontSize: 16, marginVertical: 8}}>{featureFieldMap[f]}</Text>
-                    <Ionicons   
-                      name={selectedFeatures.includes(f) ? "checkmark-circle" : "radio-button-off"}
-                      size={30}
-                      color={selectedFeatures.includes(f) ? ambrasGreen : "#999"}
-                    />
-
-                    {/* <Switch value={selectedFeatures.includes(f)} onValueChange={() => toggleFeature(f)} />
-                  <Text style={{ marginLeft: 8 }}>{f}</Text> */}
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <PickerInputModal
-            visible={showPickerInputModal}
-            options={
-              activeField === "city"
-                ? ["All Cities", ...cities].map((v) => ({ label: v, value: v }))
-                : activeField === "category"
-                  ? ["All", ...Object.values(Category)].map((cat) => ({ label: cat, value: cat }))
-                  : []
-            }
-            title={activeField === "category" ? "Select Type" : "Select City"}
-            onClose={() => setShowPickerInputModal(false)}
-            selectedValue={activeField === "category" ? selectedCategory : selectedCity}
-            onSelect={handlePickerSelect}
-          />
-        </View>
-      )}
-
-      {/* Floating button */}
-      {mapReady && (
-        <View style={[styles.floatingButtonContainer, { bottom: showList ? height * 0.4 : 0 }]}>
-          <Ionicons
-            name={showList ? "chevron-down" : "chevron-up"}
-            size={24}
-            color="white"
-            style={styles.floatingButton}
-            onPress={() => setShowList(!showList)}
-          />
-        </View>
-      )}
-
       {overlayPos && selectedSpot && (
-        <View style={{ zIndex: -1, position: "absolute", left: width / 2 - 75, top: height / 2 - 75, width: 150, backgroundColor: "white", padding: 8, borderRadius: 8, borderColor: ambrasGreen, borderWidth: 2 }}>
-          <TouchableOpacity onPress={() => { setShowSpotDetails(true) }}>
+        <View style={styles.overlay}>
+          <TouchableOpacity onPress={() => setShowSpotDetails(true)}>
             <TouchableOpacity
-              onPress={() => {
-                setOverlayPos(null);
-                setSelectedSpot(null);
-              }}
+              onPress={() => { setOverlayPos(null); setSelectedSpot(null); }}
               style={{ position: "absolute", top: 4, right: 4, zIndex: 10 }}
             >
               <Ionicons name="close" size={16} />
@@ -302,7 +281,6 @@ const SpotmapScreen: React.FC = () => {
           <Text style={{ ...globalStyles.title, color: "white", marginBottom: 20 }}>Nearby spots</Text>
           <FlatList
             data={filteredSpots}
-            key={filteredSpots.map(s => s.id).join(',')}
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderSpotCard}
             horizontal
@@ -312,6 +290,21 @@ const SpotmapScreen: React.FC = () => {
       )}
 
       <SpotDetailsOverlay spot={selectedSpot!} visible={showSpotDetails} onClose={() => setShowSpotDetails(false)} />
+
+      <PickerInputModal
+        visible={showPickerInputModal}
+        options={
+          activeField === "city"
+            ? ["All Cities", ...cities].map((v) => ({ label: v, value: v }))
+            : activeField === "category"
+              ? ["All", ...Object.values(Category)].map((cat) => ({ label: cat, value: cat }))
+              : []
+        }
+        title={activeField === "category" ? "Select Type" : "Select City"}
+        onClose={() => setShowPickerInputModal(false)}
+        selectedValue={activeField === "category" ? selectedCategory : selectedCity}
+        onSelect={handlePickerSelect}
+      />
     </View>
   );
 };
@@ -319,17 +312,35 @@ const SpotmapScreen: React.FC = () => {
 // STYLES
 const styles = StyleSheet.create({
   map: { width, height, zIndex: -2 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  filterOverlay: { position: "absolute", top: 70, width: "100%", backgroundColor: "white", padding: 10, borderRadius: 8, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 5, elevation: 5 },
-  filterRow: { ...globalStyles.flexRow, borderWidth: 1, borderBottomWidth: 1, borderBottomColor: ambrasGreen, padding: 6, justifyContent: "space-between"},
-  floatingButtonContainer: { position: "absolute", alignSelf: "center", zIndex: 10 },
-  floatingButton: { width: 140, height: 30, backgroundColor: ambrasGreen, borderTopLeftRadius: 20, borderTopRightRadius: 20, textAlign: "center", textAlignVertical: "center" },
+  searchContainer: { backgroundColor: ambrasGreen, width: "100%", paddingTop: 35, paddingBottom: 10, zIndex: 10 },
+  searchBar: { flexDirection: "row", alignItems: "center", backgroundColor: "white", borderRadius: 8, paddingHorizontal: 10, height: 40, width: "95%", alignSelf: "center" },
+  filtersRow: { marginTop: 10, width: "100%", paddingHorizontal: 5 },
+  filterRow: { flexDirection: "row", justifyContent: "center", borderWidth: 1, borderColor: "white", paddingHorizontal: 10, paddingVertical: 2, borderRadius: 20,  },
+  filterText: { color: "white", fontWeight: "500", fontSize: 14 },
+  goToLocationButton: {
+    position: "absolute",
+    bottom: 30,
+    right: 20,
+    backgroundColor: "white",
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 4,
+    zIndex: 20,
+  },
+  floatingIcon: { width: 20, height: 20, resizeMode: "contain" },
   listContainer: { position: "absolute", bottom: 0, left: 0, right: 0, height: height * 0.4, backgroundColor: ambrasGreen, padding: 10 },
   spotCard: { width: 240, height: 200, marginRight: 12, borderRadius: 12, overflow: "hidden", backgroundColor: "white" },
   spotName: { padding: 10, fontWeight: "bold", fontSize: 18, textAlign: "center" },
   spotImage: { width: "100%", flex: 1 },
   distanceBadge: { position: "absolute", bottom: 8, right: 8, backgroundColor: "rgba(0,0,0,0.6)", paddingHorizontal: 6, paddingVertical: 3, borderRadius: 8 },
   distanceText: { color: "white", fontSize: 12 },
+  overlay: { zIndex: 100, position: "absolute", left: width / 2 - 75, top: height / 2 - 75, width: 150, backgroundColor: "white", padding: 8, borderRadius: 8, borderColor: ambrasGreen, borderWidth: 2 },
 });
 
 export default SpotmapScreen;
