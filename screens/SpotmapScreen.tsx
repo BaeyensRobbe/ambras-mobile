@@ -23,6 +23,7 @@ import { PickerInputModal } from "../components/PickerInputModal";
 import { fetchCitiesOnly } from "../utils/spotHelperFunctions";
 import SpotSearchModal from "../components/spotmap/SpotSearchModal";
 import MultiSelectModal from "../components/MultiSelectModal";
+import { getFirstPhoto } from "../utils/spotmap";
 
 const { width, height } = Dimensions.get("window");
 
@@ -271,7 +272,7 @@ const SpotmapScreen: React.FC = () => {
               <Ionicons name="close" size={16} />
             </TouchableOpacity>
             <Text style={{ fontWeight: "bold", textAlign: "center" }}>{selectedSpot.name}</Text>
-            <Image source={{ uri: selectedSpot.photos[0]?.url }} style={{ width: "100%", height: 80, borderRadius: 6, marginTop: 4 }} cachePolicy="memory-disk" />
+            <Image source={{ uri: getFirstPhoto(selectedSpot.photos)?.url }} style={{ width: "100%", height: 80, borderRadius: 6, marginTop: 4 }} cachePolicy="memory-disk" />
           </TouchableOpacity>
         </View>
       )}

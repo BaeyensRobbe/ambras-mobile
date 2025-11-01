@@ -15,7 +15,7 @@ const apiUrl = BASE_URL.startsWith("http") ? BASE_URL : `https://${BASE_URL}`;
 
 export const fetchSpots = async (type: string) => {
   try {
-    const url = BASE_URL.startsWith("http") ? `${BASE_URL}/spots/suggestions` : `https://${BASE_URL}/spots/${type}`;
+    const url = BASE_URL.startsWith("http") ? `${BASE_URL}/spots/${type}` : `https://${BASE_URL}/spots/${type}`;
     const res = await fetch(url);
     if (!res.ok) {
       throw new Error("Failed to fetch spot suggestions");
@@ -49,9 +49,10 @@ export const deleteSpot = async (spotId: number) => {
     throw new Error('Spot not found');
   }
   const photos = await supabase.from('Photo').select('*').eq('spotId', spotId).then(res => res.data || []);
-  if (photos.length < 1) {
-    throw new Error('Cannot delete spot with associated photos. Please delete photos first.');
-  }
+  // if (photos.length < 1) {
+  //   return;
+  //   throw new Error('Cannot delete spot with associated photos. Please delete photos first.');
+  // }
 
   if (spot.status === 'Approved') {
     await deletePhotosFromR2(photos);

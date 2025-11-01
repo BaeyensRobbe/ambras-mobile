@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Modal, TouchableOpacity, ScrollView, FlatList, Dimensions } from "react-native";
+import { View, Text, Modal, TouchableOpacity, ScrollView, Dimensions } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { Spot, Photo } from "../types/types";
 import { styles, ambrasGreen } from "../styles";
-import { SortablePhotos } from "./sortablePhotos";
-import { Image } from "expo-image"
+import { Image } from "expo-image";
 
 interface ApproveSpotModalProps {
   visible: boolean;
@@ -17,7 +16,6 @@ const { width } = Dimensions.get("window");
 
 const ApproveSpotModal: React.FC<ApproveSpotModalProps> = ({ visible, spot, onClose, onApprove }) => {
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [mapType, setMapType] = useState<"standard" | "satellite">("standard");
 
   useEffect(() => {
     if (spot) setPhotos([...spot.photos]);
@@ -38,35 +36,17 @@ const ApproveSpotModal: React.FC<ApproveSpotModalProps> = ({ visible, spot, onCl
     { key: "lat", label: "Location", type: "location" },
   ];
 
-  const renderPhotoItem = ({ item, index, drag, isActive }: RenderItemParams<Photo>) => (
-  <TouchableOpacity
-    onLongPress={drag} // start dragging on long press
-    style={{
-      marginHorizontal: 5,
-      alignItems: "center",
-      opacity: isActive ? 0.8 : 1,
-    }}
-  >
-    <Image
-      source={{ uri: item.url }}
-      style={{ width: width * 0.7, height: 200, borderRadius: 8 }}
-      resizeMode="cover"
-    />
-    <Text style={{ color: "white", marginTop: 5 }}>{index + 1}</Text>
-  </TouchableOpacity>
-);
+  const movePhoto = (index: number, direction: "up" | "down") => {
+    setPhotos((prev) => {
+      const newPhotos = [...prev];
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
 
-  const renderPhoto = ({ item, index }: { item: Photo; index: number }) => (
-    <View style={{ marginHorizontal: 5, alignItems: "center" }}>
-      <Image
-        source={{ uri: item.url }}
-        style={{ width: width * 0.7, height: 200, borderRadius: 8 }}
-        contentFit="cover"
-        cachePolicy="disk"
-      />
-      <Text style={{ color: "white", marginTop: 5 }}>{index + 1}</Text>
-    </View>
-  );
+      if (targetIndex < 0 || targetIndex >= newPhotos.length) return prev; // out of range
+
+      [newPhotos[index], newPhotos[targetIndex]] = [newPhotos[targetIndex], newPhotos[index]];
+      return newPhotos;
+    });
+  };
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
@@ -81,28 +61,22 @@ const ApproveSpotModal: React.FC<ApproveSpotModalProps> = ({ visible, spot, onCl
         <ScrollView style={{ flex: 1, marginTop: 10 }}>
           {fields.map((field) => {
             let value: string | boolean = spot[field.key];
-            if (field.type === "check" || field.type === "favorite") {
-              value = !!value;
-            } else if (!value) {
-              value = "-";
-            }
+            if (field.type === "check" || field.type === "favorite") value = !!value;
+            else if (!value) value = "-";
 
             const isMultilineField = field.key === "notes";
+
             return (
               <View
                 key={field.key}
                 style={{
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: "#eee",
-        ...(isMultilineField
-          ? { flexDirection: "column", alignItems: "flex-start" }
-          : {
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }),
-      }}
+                  paddingVertical: 12,
+                  borderBottomWidth: 1,
+                  borderBottomColor: "#eee",
+                  ...(isMultilineField
+                    ? { flexDirection: "column", alignItems: "flex-start" }
+                    : { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }),
+                }}
               >
                 <Text style={{ fontWeight: "600", fontSize: 16 }}>{field.label}</Text>
                 {field.type === "check" ? (
@@ -138,7 +112,6 @@ const ApproveSpotModal: React.FC<ApproveSpotModalProps> = ({ visible, spot, onCl
             );
           })}
 
-          {/* Map */}
           {spot.lat && spot.lng && (
             <MapView
               style={{ width: "100%", height: 300, marginVertical: 10, borderRadius: 8 }}
@@ -150,47 +123,103 @@ const ApproveSpotModal: React.FC<ApproveSpotModalProps> = ({ visible, spot, onCl
               }}
               scrollEnabled={false}
               zoomEnabled={false}
-
               mapType="satellite"
-
             >
               <Marker coordinate={{ latitude: spot.lat, longitude: spot.lng }} />
             </MapView>
-            
           )}
 
-          {/* Photos Swipe Section */}
+          {/* Photos Section */}
           <Text style={[styles.label, { marginBottom: 5, marginTop: 10 }]}>Photos</Text>
-          
-          {/* <FlatList
-            data={photos}
-            horizontal
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={renderPhoto}
-            showsHorizontalScrollIndicator={false}
-            pagingEnabled
-          /> */}
-          <SortablePhotos photos={photos} setPhotos={setPhotos} />
-        </ScrollView> 
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              justifyContent: "space-between",
+            }}
+          >
+            {photos.map((photo, index) => (
+              <View
+                key={photo.id}
+                style={{
+                  width: (width - 40) / 2,
+                  marginBottom: 15,
+                  alignItems: "center",
+                }}
+              >
+                <View style={{ position: "relative" }}>
+                  <Image
+                    source={{ uri: photo.url }}
+                    style={{
+                      width: (width - 40) / 2,
+                      height: (width - 40) / 2,
+                      borderRadius: 10,
+                    }}
+                    contentFit="cover"
+                    cachePolicy="disk"
+                  />
+
+                  {/* Overlay buttons in top-right */}
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: 8,
+                      right: 8,
+                      flexDirection: "column",
+                    }}
+                  >
+                    <TouchableOpacity
+                      onPress={() => movePhoto(index, "up")}
+                      disabled={index === 0}
+                      style={{
+                        backgroundColor: index === 0 ? "#aaa" : ambrasGreen,
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                        borderRadius: 6,
+                        marginBottom: 5,
+                      }}
+                    >
+                      <Text style={{ color: "white", fontWeight: "600" }}>↑</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => movePhoto(index, "down")}
+                      disabled={index === photos.length - 1}
+                      style={{
+                        backgroundColor: index === photos.length - 1 ? "#aaa" : ambrasGreen,
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                        borderRadius: 6,
+                      }}
+                    >
+                      <Text style={{ color: "white", fontWeight: "600" }}>↓</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <Text style={{ color: "white", marginTop: 5 }}>#{index + 1}</Text>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
 
         {/* Approve Button */}
         <View style={{ paddingVertical: 10 }}>
           <TouchableOpacity
             onPress={() =>
-  onApprove({
-    ...spot,
-    photos: photos.map(p => ({
-      id: p.id,
-      url: p.url,
-      spotId: p.spotId,
-      uuid: p.uuid,
-      // add any other simple fields you need, but NO Animated.Values
-    })),
-  })
-}
+              onApprove({
+                ...spot,
+                photos: photos.map((p) => ({
+                  id: p.id,
+                  url: p.url,
+                  spotId: p.spotId,
+                  uuid: p.uuid,
+                })),
+              })
+            }
             style={{
               backgroundColor: ambrasGreen,
-              padding: 15,
+              padding: 15,  
               borderRadius: 8,
               alignItems: "center",
             }}

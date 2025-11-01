@@ -1,3 +1,5 @@
+import { Photo } from "../types/types";
+
 const icons = {
   gym: require('../assets/markers/yellow-dot.png'),
   spots: require('../assets/markers/blue-dot.png'),
@@ -24,3 +26,14 @@ export const getIconByCategory = (category: string | undefined) => {
       return icons.default;
   }
 };
+
+export const getFirstPhoto = (photos: Photo[]): Photo | null => {
+  if (photos.length < 1) return null;
+
+  for (let photo of photos) {
+    if (photo.order === 1) {
+      return photo;
+    }
+  }
+  return photos[0];
+}

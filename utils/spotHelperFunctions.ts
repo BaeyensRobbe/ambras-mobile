@@ -297,57 +297,73 @@ export const deletePhotosFromR2 = async (photos: Photo[]) => {
 
 
 export const uploadOrderedPhotosToR2 = async (spot: Spot): Promise<Photo[]> => {
-  const orderedPhotos = spot.photos;
+  if (!spot.photos || spot.photos.length === 0) return [];
+
   const folderName = spot.id;
-  const uuid = orderedPhotos[0]?.uuid;
+  const uuid = spot.photos[0]?.uuid;
 
-  const uploadPromises = orderedPhotos.map(async (photo, index) => {
-    const urlPath = new URL(photo.url).pathname;
-    const extension = urlPath.split('.').pop() || 'jpg';
-    const fileName = `${String(index + 1).padStart(2, '0')}_${folderName}.${extension}`;
-    const mimeType = extension === 'png' ? 'image/png' : 'image/jpeg';
+  const uploadedPhotos: Photo[] = [];
 
-    const localPath =
-      photo.url.startsWith('file://') || photo.url.startsWith('content://')
-        ? photo.url
-        : await downloadTempFile(photo.url);
+  for (let index = 0; index < spot.photos.length; index++) {
+    const photo = spot.photos[index];
 
-    const base64 = await fileToBase64(localPath);
-    const fileBytes = decodeBase64(base64);
+    try {
+      // Determine file path
+      const localPath =
+        photo.url.startsWith("file://") || photo.url.startsWith("content://")
+          ? photo.url
+          : await downloadTempFile(photo.url);
 
-    const signRes = await fetch(`${apiUrl}/r2/sign-upload`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fileName,
-        folderName,
-        fileType: mimeType,
-      }),
-    });
+      // Convert to bytes
+      const base64 = await fileToBase64(localPath);
+      if (!base64) throw new Error(`File read failed for ${photo.url}`);
 
-    if (!signRes.ok) throw new Error(`Failed presign for ${fileName}`);
+      const fileBytes = decodeBase64(base64);
+      if (!fileBytes || fileBytes.byteLength === 0) throw new Error(`File is empty: ${photo.url}`);
 
-    const { uploadUrl, publicUrl } = await signRes.json();
+      // Determine file name and MIME type
+      const urlPath = new URL(photo.url).pathname;
+      const extension = urlPath.split(".").pop() || "jpg";
+      const fileName = `${String(index + 1).padStart(2, "0")}_${folderName}.${extension}`;
+      const mimeType = extension === "png" ? "image/png" : "image/jpeg";
 
-    const uploadRes = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': mimeType },
-      body: fileBytes,
-    });
+      // Get presigned URL
+      const signRes = await fetch(`${apiUrl}/r2/sign-upload`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName, folderName, fileType: mimeType }),
+      });
 
-    if (!uploadRes.ok) throw new Error(`Upload failed: ${fileName}`);
+      if (!signRes.ok) throw new Error(`Presign failed for ${fileName}`);
+      const { uploadUrl, publicUrl } = await signRes.json();
 
-    return {
-      id: Date.now() + index,
-      url: publicUrl,
-      uuid,
-      spotId: spot.id,
-    };
-  });
+      // Upload file
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": mimeType },
+        body: fileBytes,
+      });
 
-  const newPhotos = await Promise.all(uploadPromises);
-  return newPhotos;
+      if (!uploadRes.ok) throw new Error(`Upload failed for ${fileName}`);
+
+      // Store uploaded photo with order
+      uploadedPhotos.push({
+        id: Date.now() + index,
+        url: publicUrl,
+        uuid,
+        spotId: spot.id,
+        order: index + 1, // store order explicitly
+      });
+
+    } catch (err) {
+      console.error("Failed uploading photo:", photo.url, err);
+      throw err; // stop approval if any photo fails
+    }
+  }
+
+  return uploadedPhotos;
 };
+
 
 
 export const fetchCitiesOnly = async (): Promise<string[]> => {

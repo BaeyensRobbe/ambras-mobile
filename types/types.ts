@@ -100,6 +100,7 @@ export type Photo = {
   url: string;
   uuid: string;
   spotId: number;
+  order?: number;
 };
 
 

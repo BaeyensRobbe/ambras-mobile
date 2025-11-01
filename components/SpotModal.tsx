@@ -48,6 +48,7 @@ const SpotModal: React.FC<SpotModalProps> = ({ visible, mode, spot = null, onClo
   useEffect(() => {
     setFormData(initialData);
   }, [spot, visible]);
+  
 
   useEffect(() => {
     const fetchCities = async () => {
@@ -195,6 +196,7 @@ const SpotModal: React.FC<SpotModalProps> = ({ visible, mode, spot = null, onClo
           <PhotoSelectorModal
             visible={photoSelectorVisible}
             photos={formData.photos || []}
+            spot={spot}
             onClose={() => setPhotoSelectorVisible(false)}
             onChange={(photos: (string | Photo)[]) => setFormData({ ...formData, photos })}
           />

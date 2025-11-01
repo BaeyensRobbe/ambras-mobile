@@ -33,7 +33,20 @@ const SpotDetailsOverlay: React.FC<SpotDetailsOverlayProps> = ({
   const [isViewerVisible, setIsViewerVisible] = useState(false);
 
 
-  const photos: Photo[] = spot?.photos || [];
+  const photos: Photo[] =
+  (spot?.photos || [])
+    .slice() // create a copy to avoid mutating props
+    .sort((a, b) => {
+      // If both have an order, sort by it
+      if (a.order != null && b.order != null) return a.order - b.order;
+      // If only one has order, it comes first
+      if (a.order != null) return -1;
+      if (b.order != null) return 1;
+      // Otherwise, keep original order
+      return 0;
+    });
+
+
 
   // Lazy preload current, previous, next images
   useEffect(() => {
