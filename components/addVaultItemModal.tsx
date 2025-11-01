@@ -77,8 +77,6 @@ const AddVaultItemModal: React.FC<Props> = ({ visible, onClose, onSubmit, defaul
     type: fileType,
   } as any);
   formData.append('title', title);
-  console.log("Uploading image", uri, title, formData);
-
   try {
     const res = await fetch(`${imageApiUrl}`, {
       method: 'POST',
@@ -88,7 +86,6 @@ const AddVaultItemModal: React.FC<Props> = ({ visible, onClose, onSubmit, defaul
     if (!res.ok) throw new Error('Upload failed');
 
     const data = await res.json();
-    console.log("Upload response", data);
     return data.image_url;
   } catch (err) {
     console.error(err);

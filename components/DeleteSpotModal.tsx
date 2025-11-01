@@ -30,7 +30,6 @@ const DeleteSpotModal: React.FC<DeleteSpotModalProps> = ({
   const handleDelete = async () => {
     if (!spot) return;
     setDeleting(true);
-    console.log("Spot ID:", spot.id);
     try {
       await deleteSpot(spot.id);
       Toast.show({

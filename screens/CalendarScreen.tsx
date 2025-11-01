@@ -31,13 +31,10 @@ const CalendarScreen: React.FC = () => {
   const fetchEvents = useCallback(async () => {
     try {
       const data = await fetchGoogleCalendarEvents();
-      console.log("Fetched Google Calendar events:", data[0]);
       const formatted: CalendarEvent[] = data.map((ev: any) => {
         let start: Date;
         let end: Date;
         let allDay = false;
-        console.log("Raw event from Google:", ev);
-
         if (ev.start?.date) {
           start = new Date(ev.start.date); // start of day in local TZ
           // subtract 1 ms is wrong; instead just subtract 1 day from Google-exclusive end
@@ -49,8 +46,6 @@ const CalendarScreen: React.FC = () => {
           start = new Date(ev.start.dateTime);
           end = new Date(ev.end.dateTime);
         }
-        console.log("Formatted event:", { id: ev.id, title: ev.summary, start, end, allDay, color: ev.colorId });
-
         return {
           id: ev.id,
           title: ev.summary || "Untitled",

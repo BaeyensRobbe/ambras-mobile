@@ -7,7 +7,6 @@ export const fetchGoogleCalendarEvents = async () => {
     const res = await fetch(`${apiUrl}/google-calendar`);
     if (!res.ok) throw new Error("Failed to fetch calendar events");
     const data = await res.json();
-    console.log("Raw Google Calendar data:", data);
     return data;
   } catch (err) {
     console.error("Error fetching Google Calendar events:", err);
@@ -27,8 +26,6 @@ export const addGoogleCalendarEvent = async (event: {
   color?: string;
 }) => {
   try {
-    console.log("Adding Google Calendar event:", event);
-
     let startStr: string;
     let endStr: string;
 

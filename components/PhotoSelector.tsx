@@ -48,12 +48,10 @@ const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
   }
 
   const handleDeletePhoto = (uri: string) => {
-    console.log("Deleting photo:", uri);
     const updatedPhotos = localPhotos.filter(
       (photo) => (typeof photo === "string" ? photo : photo.url) !== (typeof uri === "string" ? uri : uri.url)
     );
     setLocalPhotos(updatedPhotos);
-    console.log("Updated photos after deletion:", updatedPhotos);
   };
 
   return (

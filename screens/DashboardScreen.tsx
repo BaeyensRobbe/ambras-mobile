@@ -42,7 +42,6 @@ const DashboardScreen: React.FC = () => {
 
   const getNextEvent = async () => {
     const event = await fetchNextEvent();
-    console.log("Next event:", event);
     setNextEvent(event);
   };
 

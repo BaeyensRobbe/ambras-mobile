@@ -10,7 +10,6 @@ const imageApiUrl = API_BASE_URL.startsWith("http") ? API_BASE_URL : `https://${
 export const fetchVaultItems = async (): Promise<VaultItem[]> => {
   try {
     const res = await fetch(`${apiUrl}/vault`);
-    console.log("Response status:", res.status);
     if (!res.ok) throw new Error("Failed to fetch vault items");
     const data = await res.json();
 
@@ -76,7 +75,6 @@ export const fetchSignedUrl = async (fileName: string): Promise<string | null> =
  */
 export const updateVaultItem = async (id: string, item: Omit<VaultItem, "id">): Promise<VaultItem | null> => {
   try {
-    console.log("Updating vault item:", id, item);
     const res = await fetch(`${apiUrl}/vault/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

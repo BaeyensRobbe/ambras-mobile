@@ -90,7 +90,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ visible, onClose, onAdded
       start = combineDateTime(startDate, startTime);
       end = combineDateTime(endDate, endTime);
     }
-    console.log("Combined start:", start, "end:", end);
     try {
       await addGoogleCalendarEvent({
         title,

@@ -16,7 +16,6 @@ const apiUrl = BASE_URL.startsWith("http") ? BASE_URL : `https://${BASE_URL}`;
 export const fetchSpots = async (type: string) => {
   try {
     const url = BASE_URL.startsWith("http") ? `${BASE_URL}/spots/suggestions` : `https://${BASE_URL}/spots/${type}`;
-    console.log("Fetching spot suggestions from:", url);
     const res = await fetch(url);
     if (!res.ok) {
       throw new Error("Failed to fetch spot suggestions");
@@ -42,7 +41,6 @@ export const getSpotById = async (spotId: number) => {
 }
 
 export const deleteSpot = async (spotId: number) => {
-  console.log("Delete spot called");
   if (typeof spotId !== 'number') {
     throw new Error('deleteSpot: invalid spotId (expected number)');
   }
@@ -57,9 +55,7 @@ export const deleteSpot = async (spotId: number) => {
 
   if (spot.status === 'Approved') {
     await deletePhotosFromR2(photos);
-    console.log("Deleted photos from R2 for spot ID:", spotId);
   }
-  console.log(apiUrl + "/spots/delete/" + spotId);
   const res = await fetch(`${apiUrl}/spots/delete/${spotId}`, {
     method: "DELETE",
   });
@@ -74,7 +70,6 @@ export const fetchApprovedSpots = async () => {
     throw new Error("Failed to fetch approved spots");
   }
   const data = await res.json();   // <--- await here!
-  console.log("Approved spots response:", data);
   return data;
 }
 

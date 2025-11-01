@@ -65,7 +65,6 @@ const SpotScreen = () => {
   };
 
   const handleApproved = async (updatedSpot: Spot) => {
-    console.log("Approving spot:", updatedSpot);
     if (!updatedSpot || updatedSpot.photos.length === 0) return;
     setApproveModalVisible(false);
 

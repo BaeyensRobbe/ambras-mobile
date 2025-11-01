@@ -38,7 +38,6 @@ const SpotDetailsOverlay: React.FC<SpotDetailsOverlayProps> = ({
   // Lazy preload current, previous, next images
   useEffect(() => {
   if (!visible || photos.length === 0) return;
-    console.log(photos)
   const preloadIndexes = [
     currentPhotoIndex,
     (currentPhotoIndex + 1) % photos.length,

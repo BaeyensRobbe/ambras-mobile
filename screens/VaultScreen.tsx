@@ -81,7 +81,6 @@ useEffect(() => {
       setLoading(true);
       const items = await fetchVaultItems();
       const foldersWithImages = await handleFetchImages(items);
-      console.log("Folders with images", foldersWithImages[3].items);
       setFolders(foldersWithImages);
     } catch (err) {
       console.error(err);
@@ -116,10 +115,8 @@ useEffect(() => {
 };
 
   const handlePressItem = async (item: VaultItem) => {
-    console.log("Pressed item", item);
     if (item.type === "password") {
       const decrypted = await decryptVaultPassword(item.id);
-      console.log("decrypted", decrypted);
       if (decrypted) {
         handleCopy(decrypted, "Password");
       }
@@ -128,7 +125,6 @@ useEffect(() => {
       handleCopy(item.url, "Link");
     }
     if (item.type === "note" && item.content) {
-      console.log("Editing note", item);
       setSelectedItem(item);
       setEditNoteModalVisible(true);
     }
