@@ -7,6 +7,7 @@ import {
   FlatList,
   TouchableOpacity,
   ScrollView,
+  RefreshControl,
 } from "react-native";
 import { Image } from "expo-image";
 import MapView, { PROVIDER_GOOGLE } from "react-native-maps";
@@ -60,6 +61,8 @@ const SpotmapScreen: React.FC = () => {
   const mapRef = useRef<MapView>(null);
   const [overlayPos, setOverlayPos] = useState<{ x: number; y: number } | null>(null);
 
+  const [refreshing, setRefreshing] = useState(false);
+
   // Feature mapping
   const featureFieldMap: Record<string, keyof Spot> = {
     "Covered": "isCovered",
@@ -67,6 +70,12 @@ const SpotmapScreen: React.FC = () => {
     "Flip area": "hasFlipArea",
     "Parkour park": "isPkPark",
   };
+
+  const onRefresh = async () => {
+  setRefreshing(true);
+  await fetchData(); // your existing fetchData function
+  setRefreshing(false);
+};
 
   // DATA FETCHING
   useEffect(() => {
@@ -320,6 +329,9 @@ const SpotmapScreen: React.FC = () => {
             renderItem={renderSpotCard}
             horizontal
             showsHorizontalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="white" />
+            }
           />
         </View>
       )}
