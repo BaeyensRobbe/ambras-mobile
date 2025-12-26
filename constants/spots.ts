@@ -8,8 +8,10 @@
     { key: "isPkPark", label: "Parkour park", type: "check" },
     { key: "isCovered", label: "Covered", type: "check" },
     { key: "hasFlipArea", label: "Flip area", type: "check" },
+    { key: "hasWaterChallenge", label: "Water challenge", type: "check" },
     { key: "hasSwings", label: "Swings", type: "check" },
     { key: "isFavorite", label: "Favorite", type: "favorite" },
+    { key: "websiteLink", label: "Website", type: "text" },
     { key: "lat", label: "Location", type: "location" },
     { key: "photos", label: "Photos (URLs)", type: "photos" },
   ];

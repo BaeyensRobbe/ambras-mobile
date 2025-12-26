@@ -169,6 +169,8 @@ const SpotScreen = () => {
     if (!selectedSpot) return;
     setUploadingPhotos(true);
 
+    console.log("Saving spot:", updatedSpot);
+
     Toast.show({
       type: "progress",
       text1: "Preparing upload...",
@@ -240,6 +242,7 @@ const SpotScreen = () => {
       }
 
       updateProgress("Saving spot data...");
+      console.log("Final spot data to save:", { ...updatedSpot, photos: updatedPhotos });
       await saveSpot({ ...updatedSpot, photos: updatedPhotos } as Spot);
       currentStep++;
 

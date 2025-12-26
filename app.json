@@ -15,8 +15,10 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "We need your location to show nearby spots"
-      }
+        "NSLocationWhenInUseUsageDescription": "We need your location to show nearby spots",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.ambras.app"
     },
     "android": {
       "adaptiveIcon": {

@@ -198,6 +198,30 @@ export const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 6,
   },
+  rotateButton: {
+    position: "absolute",
+    top: 5,
+    right: 40,
+    backgroundColor: "#00000080",
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+  },
+    downloadButton: {
+    position: "absolute",
+    top: 5,
+    left: 5,
+    backgroundColor: "#00000080",
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+  },
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",

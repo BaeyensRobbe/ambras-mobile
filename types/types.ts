@@ -2,6 +2,7 @@ export enum Category {
   Spots = 'Spots',
   Gym = 'Gym',
   Non_spot = 'Non_spot',
+  Parkour_park = 'Parkour_park',
   Challenge = 'Challenge',
   Poleslide = 'Poleslide',
   Descent = 'Descent',
@@ -20,6 +21,8 @@ export type Spot = {
   isPkPark: boolean;
   hasFlipArea: boolean;
   hasSwings: boolean;
+  hasWaterChallenge: boolean;
+  websiteLink?: string;
   status: 'Pending' | 'Approved' | 'Rejected';
   notes?: string;
   lat: number;
@@ -38,6 +41,8 @@ export type ApprovedSpot = {
   isPkPark: boolean;
   hasFlipArea: boolean;
   hasSwings: boolean;
+  hasWaterChallenge: boolean;
+  websiteLink?: string;
   status: 'Approved';
   lat: number;
   lng: number;
@@ -54,12 +59,32 @@ export type formDataSpot = {
   isPkPark: boolean;
   hasFlipArea: boolean;
   hasSwings: boolean;
+  hasWaterChallenge: boolean;
+  websiteLink?: string;
   status: 'Pending' | 'Approved' | 'Rejected';
   notes?: string;
   lat: number;
   lng: number;
   photos: (Photo | String)[];
 }
+
+export type editFormDataSpot = {
+  id: number;
+  name: string;
+  city: string;
+  category?: string;
+  isFavorite: boolean;
+  isCovered: boolean;
+  isPkPark: boolean;
+  hasFlipArea: boolean;
+  hasSwings: boolean;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  notes?: string;
+  lat: number;
+  lng: number;
+  photos: (Photo)[];
+}
+
 
 export type addSpotData = {
   name: string;
@@ -70,6 +95,8 @@ export type addSpotData = {
   isPkPark: boolean;
   hasFlipArea: boolean;
   hasSwings: boolean;
+  hasWaterChallenge: boolean;
+  websiteLink?: string;
   lat: number;
   lng: number;
   photos: (Photo | String)[];
@@ -98,6 +125,7 @@ export type CompleteSpot = {
 export type Photo = {
   id: number;
   url: string;
+  lowResUrl?: string;
   uuid: string;
   spotId: number;
   order?: number;

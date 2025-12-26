@@ -5,12 +5,17 @@ import {
   Text,
   TouchableOpacity,
   FlatList,
+  ActivityIndicator,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
+import { downloadAsync, cacheDirectory } from "expo-file-system/legacy";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { Photo } from "../types/types";
 import { styles, ambrasGreen } from "../styles";
+import * as Sharing from 'expo-sharing';
+import * as MediaLibrary from 'expo-media-library';
 
 interface PhotoSelectorModalProps {
   visible: boolean;
@@ -20,6 +25,12 @@ interface PhotoSelectorModalProps {
   onChange: (updatedPhotos: (string | Photo)[]) => void;
 }
 
+// Track rotation for each photo
+interface PhotoWithRotation {
+  photo: string | Photo;
+  rotation: number; // 0, 90, 180, 270
+}
+
 const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
   visible,
   photos = [],
@@ -27,16 +38,17 @@ const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
   onClose,
   onChange,
 }) => {
-  const [localPhotos, setLocalPhotos] = useState<(string | Photo)[]>([]);
+  const [localPhotos, setLocalPhotos] = useState<PhotoWithRotation[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     if (spot?.status === "Approved") {
       const sorted = [...photos].sort(
         (a, b) => (a.order ?? 0) - (b.order ?? 0)
       );
-      setLocalPhotos(sorted);
+      setLocalPhotos(sorted.map(p => ({ photo: p, rotation: 0 })));
     } else {
-      setLocalPhotos(photos);
+      setLocalPhotos(photos.map(p => ({ photo: p, rotation: 0 })));
     }
   }, [photos, spot]);
 
@@ -48,8 +60,11 @@ const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
     });
 
     if (!result.canceled) {
-      const newUris = result.assets.map((a) => a.uri);
-      setLocalPhotos((prev) => [...prev, ...newUris]);
+      const newPhotos = result.assets.map((a) => ({
+        photo: a.uri,
+        rotation: 0,
+      }));
+      setLocalPhotos((prev) => [...prev, ...newPhotos]);
     }
   };
 
@@ -58,10 +73,10 @@ const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
       typeof photoToDelete === "string" ? photoToDelete : photoToDelete.url;
 
     setLocalPhotos((prev) =>
-      prev.filter(
-        (photo) =>
-          (typeof photo === "string" ? photo : photo.url) !== uriToDelete
-      )
+      prev.filter((item) => {
+        const uri = typeof item.photo === "string" ? item.photo : item.photo.url;
+        return uri !== uriToDelete;
+      })
     );
   };
 
@@ -77,25 +92,157 @@ const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
 
       // If Approved, also update order fields
       if (spot?.status === "Approved") {
-        newPhotos.forEach((p, i) => {
-          if (typeof p !== "string") p.order = i + 1;
+        newPhotos.forEach((item, i) => {
+          if (typeof item.photo !== "string") {
+            item.photo.order = i + 1;
+          }
         });
       }
       return newPhotos;
     });
   };
 
-  const handleSave = () => {
-    if (spot?.status === "Approved") {
-      const withOrder = localPhotos.map((p, i) =>
-        typeof p === "string" ? p : { ...p, order: i + 1 }
-      );
-      onChange(withOrder);
-    } else {
-      onChange(localPhotos);
-    }
-    onClose();
+  const handleRotatePhoto = (index: number) => {
+    setLocalPhotos((prev) => {
+      const newPhotos = [...prev];
+      newPhotos[index] = {
+        ...newPhotos[index],
+        rotation: (newPhotos[index].rotation + 90) % 360,
+      };
+      return newPhotos;
+    });
   };
+
+// Add this import at the top of PhotoSelectorModal.tsx
+
+
+// Replace the handleDownloadPhoto function
+const handleDownloadPhoto = async (uri: string) => {
+  try {
+    let localUri = uri;
+    
+    // Only download if it's a remote URL
+    if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      console.log('📥 Downloading photo from:', uri);
+      const filename = uri.split('/').pop() || `photo-${Date.now()}.jpg`;
+      const fileUri = `${cacheDirectory}${filename}`;
+      
+      const downloadResult = await downloadAsync(uri, fileUri);
+      
+      if (!downloadResult || !downloadResult.uri) {
+        throw new Error('Download failed - no URI returned');
+      }
+      
+      localUri = downloadResult.uri;
+    } else {
+      console.log('📁 Using local photo:', uri);
+    }
+    
+    // Request permission to save to media library
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    
+    if (status === 'granted') {
+      // Save to device's photo library
+      const asset = await MediaLibrary.createAssetAsync(localUri);
+      await MediaLibrary.createAlbumAsync('Ambras', asset, false);
+      alert('✅ Photo saved to your gallery!');
+    } else {
+      // Fallback: use share sheet if permission denied
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(localUri, {
+          mimeType: 'image/jpeg',
+          dialogTitle: 'Save Photo',
+        });
+      } else {
+        alert('❌ Unable to save photo. Please check permissions.');
+      }
+    }
+  } catch (error) {
+    console.error("Error downloading photo:", error);
+    alert("❌ Failed to download photo. Please try again.");
+  }
+};
+
+  const downloadImage = async (url: string): Promise<string> => {
+    // Download remote image to local cache
+    const filename = url.split('/').pop() || `temp-${Date.now()}.jpg`;
+    const fileUri = `${cacheDirectory}${filename}`;
+    
+    const downloadResult = await downloadAsync(url, fileUri);
+    return downloadResult.uri;
+  };
+
+  const processAndRotateImage = async (
+    uri: string,
+    rotation: number
+  ): Promise<string> => {
+    if (rotation === 0) return uri;
+
+    // If it's a remote URL, download it first
+    let localUri = uri;
+    if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      localUri = await downloadImage(uri);
+    }
+
+    const manipResult = await ImageManipulator.manipulateAsync(
+      localUri,
+      [{ rotate: rotation }],
+      { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+    );
+
+    return manipResult.uri;
+  };
+
+  // Replace the handleSave function in PhotoSelectorModal
+const handleSave = async () => {
+  setIsProcessing(true);
+  try {
+    const processedPhotos: (string | Photo)[] = [];
+
+    for (let i = 0; i < localPhotos.length; i++) {
+      const item = localPhotos[i];
+      const { photo, rotation } = item;
+      const uri = typeof photo === "string" ? photo : photo.url;
+
+      // If photo was rotated, we need to re-upload it
+      if (rotation !== 0) {
+        try {
+          // Rotate the image
+          const rotatedUri = await processAndRotateImage(uri, rotation);
+          
+          // Return as a string URI - this will trigger re-upload in SpotScreen
+          // SpotScreen will handle uploading and deleting the old version
+          processedPhotos.push(rotatedUri);
+        } catch (error) {
+          console.error("Failed to rotate photo:", error);
+          // Fallback: keep the original photo without rotation
+          if (spot?.status === "Approved" && typeof photo !== "string") {
+            processedPhotos.push({ ...photo, order: i + 1 });
+          } else {
+            processedPhotos.push(photo);
+          }
+        }
+      } else {
+        // No rotation - keep original photo
+        if (spot?.status === "Approved" && typeof photo !== "string") {
+          // Keep existing Photo object with updated order
+          processedPhotos.push({ ...photo, order: i + 1 });
+        } else {
+          processedPhotos.push(photo);
+        }
+      }
+    }
+
+    onChange(processedPhotos);
+    onClose();
+  } catch (error) {
+    console.error("Error processing photos:", error);
+    alert("Failed to process photos. Please try again.");
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   return (
     <Modal visible={visible} animationType="slide">
@@ -110,37 +257,88 @@ const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
               position: "relative",
             }}
             onPress={handleAddPhoto}
+            disabled={isProcessing}
           >
-            <Ionicons name="add-circle" size={50} color={ambrasGreen} />
+            <Ionicons name="add-circle" size={50} color={isProcessing ? "#aaa" : ambrasGreen} />
           </TouchableOpacity>
         </View>
 
+        {isProcessing && (
+          <View style={{ padding: 20, alignItems: "center" }}>
+            <ActivityIndicator size="large" color={ambrasGreen} />
+            <Text style={{ marginTop: 10, color: "#666" }}>
+              Processing photos...
+            </Text>
+          </View>
+        )}
+
         <FlatList
           data={localPhotos}
-          keyExtractor={(item, index) =>
-            typeof item === "string"
-              ? `${item}-${index}`
-              : item.id?.toString() || item.url
-          }
+          keyExtractor={(item, index) => {
+            const photo = item.photo;
+            return typeof photo === "string"
+              ? `${photo}-${index}`
+              : photo.id?.toString() || photo.url;
+          }}
           numColumns={2}
           contentContainerStyle={{ paddingVertical: 10 }}
           renderItem={({ item, index }) => {
-            const uri = typeof item === "string" ? item : item.url;
+            const uri = typeof item.photo === "string" ? item.photo : item.photo.url;
+            const rotation = item.rotation;
+            
             return (
               <View style={styles.imageContainer}>
                 <Image
                   source={{ uri }}
-                  style={styles.image}
+                  style={[
+                    styles.image,
+                    { transform: [{ rotate: `${rotation}deg` }] }
+                  ]}
                   contentFit="cover"
                   cachePolicy="disk"
                 />
 
                 <TouchableOpacity
                   style={styles.deleteButton}
-                  onPress={() => handleDeletePhoto(item)}
+                  onPress={() => handleDeletePhoto(item.photo)}
+                  disabled={isProcessing}
                 >
                   <Text style={styles.buttonText}>×</Text>
                 </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.rotateButton}
+                  onPress={() => handleRotatePhoto(index)}
+                  disabled={isProcessing}
+                >
+                  <Text style={styles.buttonText}>⟳</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.downloadButton}
+                  onPress={async () => {handleDownloadPhoto(uri)}}
+                  disabled={isProcessing}
+                >
+                  <Text style={styles.buttonText}>⬇</Text>
+
+                </TouchableOpacity>
+
+                {rotation !== 0 && (
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: 5,
+                      left: 5,
+                      backgroundColor: "rgba(0,0,0,0.6)",
+                      paddingHorizontal: 6,
+                      paddingVertical: 2,
+                      borderRadius: 4,
+                    }}
+                  >
+                    <Text style={{ color: "white", fontSize: 10, fontWeight: "600" }}>
+                      {rotation}°
+                    </Text>
+                  </View>
+                )}
 
                 {spot?.status === "Approved" && (
                   <View
@@ -153,9 +351,9 @@ const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
                   >
                     <TouchableOpacity
                       onPress={() => handleMove(index, "up")}
-                      disabled={index === 0}
+                      disabled={index === 0 || isProcessing}
                       style={{
-                        backgroundColor: index === 0 ? "#aaa" : ambrasGreen,
+                        backgroundColor: (index === 0 || isProcessing) ? "#aaa" : ambrasGreen,
                         paddingHorizontal: 8,
                         paddingVertical: 4,
                         borderRadius: 6,
@@ -167,9 +365,9 @@ const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
 
                     <TouchableOpacity
                       onPress={() => handleMove(index, "down")}
-                      disabled={index === photos.length - 1}
+                      disabled={index === localPhotos.length - 1 || isProcessing}
                       style={{
-                        backgroundColor: index === photos.length - 1 ? "#aaa" : ambrasGreen,
+                        backgroundColor: (index === localPhotos.length - 1 || isProcessing) ? "#aaa" : ambrasGreen,
                         paddingHorizontal: 8,
                         paddingVertical: 4,
                         borderRadius: 6,
@@ -191,14 +389,21 @@ const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: "gray" }]}
             onPress={onClose}
+            disabled={isProcessing}
           >
             <Text style={styles.buttonText}>Close</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: ambrasGreen }]}
+            style={[
+              styles.actionButton,
+              { backgroundColor: isProcessing ? "#aaa" : ambrasGreen }
+            ]}
             onPress={handleSave}
+            disabled={isProcessing}
           >
-            <Text style={styles.buttonText}>Save</Text>
+            <Text style={styles.buttonText}>
+              {isProcessing ? "Processing..." : "Save"}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>

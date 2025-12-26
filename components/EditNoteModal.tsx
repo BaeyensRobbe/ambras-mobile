@@ -120,6 +120,7 @@ const noteStyles = StyleSheet.create({
   },
   iconButton: {
     padding: 0,
+    marginRight: 20,
   },
   headerTitle: {
     flex: 1,

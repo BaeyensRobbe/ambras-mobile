@@ -68,7 +68,6 @@ const SpotmapScreen: React.FC = () => {
     "Covered": "isCovered",
     "Swings": "hasSwings",
     "Flip area": "hasFlipArea",
-    "Parkour park": "isPkPark",
   };
 
   const onRefresh = async () => {

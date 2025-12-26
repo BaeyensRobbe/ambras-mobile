@@ -6,6 +6,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 const updateurl = API_BASE_URL.startsWith("http") ? `${API_BASE_URL}/spots/update` : `https://${API_BASE_URL}/spots/update`;
 const apiUrl = API_BASE_URL.startsWith("http") ? API_BASE_URL : `https://${API_BASE_URL}`;
 
+// Calls backend to add spot with the spot data (including photo object)
 export const addSpot = async (spot: Spot) => {
   const res = await fetch(`${apiUrl}/spots`, {
     method: 'POST',
@@ -21,6 +22,7 @@ export const addSpot = async (spot: Spot) => {
   return { ...spot, id: (await res.json()).id };
 }
 
+// Fetch total number of spots from Supabase
 export const getTotalSpots = async (): Promise<number> => {
   const { count, error } = await supabase.from('Spot').select('id', { count: 'exact', head: true });
   if (error) {
@@ -30,6 +32,7 @@ export const getTotalSpots = async (): Promise<number> => {
   return count ?? 0;
 }
 
+// Fetch total number of pending spots from Supabase
 export const getPendingSpots = async (): Promise<number> => {
   const { count, error } = await supabase.from('Spot').select('id', { count: 'exact', head: true }).eq('status', 'Pending');
   if (error) {
@@ -39,6 +42,7 @@ export const getPendingSpots = async (): Promise<number> => {
   return count ?? 0;
 }
 
+// Fetch R2 storage usage from backend
 export const fetchR2StorageUsage = async (): Promise<number> => {
   const response = await fetch(`${apiUrl}/R2/storage-usage`);
   if (!response.ok) throw new Error("Failed to fetch R2 storage usage");
@@ -46,6 +50,7 @@ export const fetchR2StorageUsage = async (): Promise<number> => {
   return parseFloat(data.totalGB); // e.g., 1.24 GB
 };
 
+// Insert photo records into Supabase and return inserted data
 export const insertPhotoRecords = async (photos: { url: string; uuid: string; spotId: number }[]) => {
   if (photos.length === 0) {
     return { data: [], error: null };
@@ -53,7 +58,9 @@ export const insertPhotoRecords = async (photos: { url: string; uuid: string; sp
   return supabase.from('Photo').insert(photos).select('*');
 }
 
+// Save spot data to backend (update existing spot)
 export const saveSpot = async (spot: Spot) => {
+  
   const res = await fetch(`${updateurl}/${spot.id}`, {
     method: 'PUT',
     headers: {
@@ -158,6 +165,7 @@ export const uploadPhotosToSupabase = async (formData: formDataSpot | addSpotDat
   return uploadedPhotos;
 };
 
+// Finalize approval: upload photos to R2, update spot status, delete from Supabase
 export const finalizeApproval = async (spot: Spot) => {
   const uuid = spot.photos[0]?.uuid;
   if (!uuid) return;
@@ -198,7 +206,7 @@ export const uploadPhotosToR2 = async (formData: formDataSpot | addSpotData, uui
       const fileBytes = decodeBase64(base64);
 
       // Generate a random file name
-      const fileName = `${Date.now()}-${Math.floor(Math.random() * 10000)}.jpg`;
+      const fileName = `${formData.name}-${Math.floor(Math.random() * 100)}.jpg`;
       const mimeType = "image/jpeg";
 
       // Ask backend for a signed URL
@@ -368,6 +376,7 @@ export const uploadOrderedPhotosToR2 = async (spot: Spot): Promise<Photo[]> => {
 
 export const fetchCitiesOnly = async (): Promise<string[]> => {
   try {
+    console.log("Fetching cities from backend..., apiUrl:", apiUrl);
     const res = await fetch(`${apiUrl}/spots/cities`, {
       method: 'GET',
       headers: {
