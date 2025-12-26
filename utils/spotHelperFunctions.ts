@@ -414,5 +414,5 @@ function decodeBase64(base64: string): Uint8Array {
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
   }
-  return bytes;
+  return bytes; 
 }

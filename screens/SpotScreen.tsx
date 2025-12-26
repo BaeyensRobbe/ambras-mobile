@@ -37,7 +37,7 @@ const SpotScreen = () => {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isFecthing, setIsFecthing] = useState(false);
-    const route = useRoute();
+  const route = useRoute();
 
 
   const progressToastId = "uploadProgress";
@@ -47,6 +47,7 @@ const SpotScreen = () => {
     setSelectedSpot(null);
   };
 
+  // Opens the edit modal for a specific spot
   const handleEdit = (id: number) => {
     const spotToEdit = spots.find((s) => s.id === id) || null;
     setSelectedSpot(spotToEdit);
@@ -168,9 +169,7 @@ const SpotScreen = () => {
   const handleSave = async (updatedSpot: formDataSpot) => {
     if (!selectedSpot) return;
     setUploadingPhotos(true);
-
-    console.log("Saving spot:", updatedSpot);
-
+    
     Toast.show({
       type: "progress",
       text1: "Preparing upload...",
