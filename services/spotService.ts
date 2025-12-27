@@ -79,20 +79,12 @@ export const saveSpotChanges = async (
 ) => {
   const isApproved = updatedSpot.status === "Approved";
 
-  const originalPhotos = originalSpot.photos.map(p => p.url); // all original URLs
-  const updatedPhotos = updatedSpot.photos.map(p => typeof p === "string" ? p : p.url);
+  const originalPhotoUrls = originalSpot.photos.map(p => p.url);
 
-  // 1. Determine new vs kept vs removed
-  const keptPhotos = updatedSpot.photos.filter(p => originalPhotos.includes(typeof p === "string" ? p : p.url));
-  const newLocalPhotos = updatedSpot.photos
-    .filter(p => (typeof p === "string" && p.startsWith("file://")) || (typeof p !== "string" && p.url.startsWith("file://")))
-    .map(p => (typeof p === "string" ? p : p.url));
-
-  const removedPhotos = originalSpot.photos.filter(p => !updatedPhotos.includes(p.url));
-
-  console.log("Kept photos:", keptPhotos);
-  console.log("New local photos to upload:", newLocalPhotos);
-  console.log("Removed photos:", removedPhotos);
+  // 1. Determine kept, new, removed
+  const keptPhotos = updatedSpot.photos.filter(p => originalPhotoUrls.includes(typeof p === "string" ? p : p.url));
+  const newLocalPhotos = updatedSpot.photos.filter(p => (typeof p === "string" ? p : p.url).startsWith("file://"));
+  const removedPhotos = originalSpot.photos.filter(p => !updatedSpot.photos.some(up => (typeof up === "string" ? up : up.url) === p.url));
 
   // 2. Delete removed photos
   if (removedPhotos.length > 0) {
@@ -105,42 +97,33 @@ export const saveSpotChanges = async (
 
   if (!isApproved) {
     // Pending: Supabase only
-    const folderUUID = (keptPhotos[0] as Photo | undefined)?.uuid ?? (uuid.v4() as string);
+    const folderUUID = keptPhotos[0]?.uuid ?? (uuid.v4() as string);
 
     const uploadedNew = newLocalPhotos.length
-      ? await uploadPhotosToSupabase({ ...updatedSpot, photos: newLocalPhotos }, folderUUID)
+      ? await uploadPhotosToSupabase({ ...updatedSpot, photos: newLocalPhotos.map(p => p.url) }, folderUUID)
       : [];
 
-    // Keep both string URLs (remote) and uploaded new Photos
-    const keptAsPhotos: Photo[] = keptPhotos.map(p =>
-      typeof p === "string" ? { id: 0, url: p, uuid: folderUUID, spotId: updatedSpot.id } : p
-    );
-
-    finalPhotos = [...keptAsPhotos, ...uploadedNew];
+    finalPhotos = [...keptPhotos.map(p => ({ ...p, uuid: folderUUID })), ...uploadedNew];
   } else {
-    // Approved: R2 only, maintain order
-    const existingUuid = (keptPhotos[0] as Photo | undefined)?.uuid ?? String(updatedSpot.id);
+    // Approved: R2 only
+    const existingUuid = keptPhotos[0]?.uuid ?? String(updatedSpot.id);
 
-// Keep modal order
-const orderedPhotos: Photo[] = [
-  ...keptPhotos.map(p => (typeof p === "string" ? { id: 0, url: p, uuid: existingUuid, spotId: updatedSpot.id } : p)),
-  ...newLocalPhotos.map((url, idx) => ({
-    id: 0,
-    url,
-    uuid: existingUuid,
-    spotId: updatedSpot.id,
-    order: keptPhotos.length + idx + 1, // append after kept photos
-  })),
-];
+    // Keep modal order intact
+    const orderedPhotos = updatedSpot.photos.map(p => ({
+      ...(typeof p === "string" ? { id: 0, url: p } : p),
+      uuid: existingUuid,
+      spotId: updatedSpot.id,
+    }));
 
-finalPhotos = await uploadOrderedPhotosToR2({ ...(updatedSpot as Spot), photos: orderedPhotos });
+    finalPhotos = await uploadOrderedPhotosToR2({ ...(updatedSpot as Spot), photos: orderedPhotos });
   }
 
-  // 4. Save spot
+  // 4. Save spot with proper order
   await updateSpot(updatedSpot.id, { ...(updatedSpot as Spot), photos: finalPhotos });
 
   // 5. Refresh UI
   await refreshData();
 };
+
 
 

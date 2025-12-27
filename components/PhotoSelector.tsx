@@ -26,11 +26,11 @@ interface PhotoSelectorModalProps {
 }
 
 // Track rotation for each photo
-interface PhotoWithRotation {
-  photo: string | Photo;
-  rotation: number; // 0, 90, 180, 270
-  clientId: string;
-}
+// interface PhotoWithRotation {
+//   photo: string | Photo;
+//   rotation: number; // 0, 90, 180, 270
+//   clientId: string;
+// }
 
 const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
   visible,
@@ -39,19 +39,20 @@ const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
   onClose,
   onChange,
 }) => {
-  const [localPhotos, setLocalPhotos] = useState<PhotoWithRotation[]>([]);
+  const [localPhotos, setLocalPhotos] = useState<Photo[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  useEffect(() => {
-    if (spot?.status === "Approved") {
-      const sorted = [...photos].sort(
-        (a, b) => (a.order ?? 0) - (b.order ?? 0)
-      );
-      setLocalPhotos(sorted.map(p => ({ photo: p, rotation: 0 })));
-    } else {
-      setLocalPhotos(photos.map(p => ({ photo: p, rotation: 0 })));
-    }
-  }, [photos, spot]);
+  // Normalizes photo orders starting from 1
+const normalizeOrders = (photos: Photo[]): Photo[] => {
+  return photos.map((p, i) => ({ ...p, order: i + 1 }));
+};
+
+
+useEffect(() => {
+  console.log("📂 Modal opened with photos:", photos);
+  const sortedPhotos = [...photos].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  setLocalPhotos(normalizeOrders(sortedPhotos));
+}, [photos, spot]);
 
 const handleAddPhoto = async () => {
   const result = await ImagePicker.launchImageLibraryAsync({
@@ -61,78 +62,52 @@ const handleAddPhoto = async () => {
   });
 
   if (!result.canceled) {
-    const newPhotos = result.assets.map((a, i) => {
-      if (spot?.status === "Approved") {
-        // Approved: create Photo object
-        return {
-          photo: {
-            id: 0,
-            url: a.uri,
-            uuid: photos[0]?.uuid || String(spot.id),
-            spotId: spot.id,
-            order: localPhotos.length + i + 1,
-          },
-          rotation: 0,
-          clientId: `${a.uri}-${Date.now()}`,
-        };
-      } else {
-        // Pending: just store string URI
-        return {
-          photo: a.uri,
-          rotation: 0,
-          clientId: `${a.uri}-${Date.now()}`,
-        };
-      }
+    setLocalPhotos((prev) => {
+      const newPhotos: Photo[] = result.assets.map((a, i) => ({
+        id: 0,
+        url: a.uri,
+        uuid: String(Date.now()) + '-' + i, // unique per photo
+        spotId: spot.id,
+        order: prev.length + i + 1,
+      }));
+
+      const combined = [...prev, ...newPhotos];
+      return normalizeOrders(combined);
     });
-    setLocalPhotos((prev) => [...prev, ...newPhotos]);
   }
 };
 
 
-  const handleDeletePhoto = (photoToDelete: string | Photo) => {
-    const uriToDelete =
-      typeof photoToDelete === "string" ? photoToDelete : photoToDelete.url;
 
-    setLocalPhotos((prev) =>
-      prev.filter((item) => {
-        const uri = typeof item.photo === "string" ? item.photo : item.photo.url;
-        return uri !== uriToDelete;
-      })
-    );
+  const handleDeletePhoto = (photoToDelete: Photo) => {
+    console.log("🗑 Deleting photo:", photoToDelete.url);
+      setLocalPhotos((prev) =>
+    normalizeOrders(prev.filter((p) => p.url !== photoToDelete.url))
+  );
   };
 
-  const handleMove = (index: number, direction: "up" | "down") => {
-    setLocalPhotos((prev) => {
-      const newPhotos = [...prev];
-      const targetIndex = direction === "up" ? index - 1 : index + 1;
-      if (targetIndex < 0 || targetIndex >= newPhotos.length) return prev;
 
-      const temp = newPhotos[index];
-      newPhotos[index] = newPhotos[targetIndex];
-      newPhotos[targetIndex] = temp;
+const handleMove = (index: number, direction: "up" | "down") => {
+  setLocalPhotos((prev) => {
+    const newPhotos = [...prev];
+    const target = direction === "up" ? index - 1 : index + 1;
+    if (target < 0 || target >= newPhotos.length) return prev;
 
-      // If Approved, also update order fields
-      if (spot?.status === "Approved") {
-        newPhotos.forEach((item, i) => {
-          if (typeof item.photo !== "string") {
-            item.photo.order = i + 1;
-          }
-        });
-      }
-      return newPhotos;
-    });
-  };
+    [newPhotos[index], newPhotos[target]] = [newPhotos[target], newPhotos[index]];
 
-  const handleRotatePhoto = (index: number) => {
-    setLocalPhotos((prev) => {
-      const newPhotos = [...prev];
-      newPhotos[index] = {
-        ...newPhotos[index],
-        rotation: (newPhotos[index].rotation + 90) % 360,
-      };
-      return newPhotos;
-    });
-  };
+    return normalizeOrders(newPhotos);
+  });
+};
+
+  // const handleRotatePhoto = (index: number) => {
+  //   setLocalPhotos((prev) => {
+  //     const newPhotos = [...prev];
+  //     newPhotos[index] = {
+  //       ...newPhotos[index],
+  //     };
+  //     return newPhotos;
+  //   });
+  // };
 
 // Add this import at the top of PhotoSelectorModal.tsx
 
@@ -185,84 +160,12 @@ const handleDownloadPhoto = async (uri: string) => {
   }
 };
 
-  const downloadImage = async (url: string): Promise<string> => {
-    // Download remote image to local cache
-    const filename = url.split('/').pop() || `temp-${Date.now()}.jpg`;
-    const fileUri = `${cacheDirectory}${filename}`;
-    
-    const downloadResult = await downloadAsync(url, fileUri);
-    return downloadResult.uri;
-  };
-
-  const processAndRotateImage = async (
-    uri: string,
-    rotation: number
-  ): Promise<string> => {
-    if (rotation === 0) return uri;
-
-    // If it's a remote URL, download it first
-    let localUri = uri;
-    if (uri.startsWith('http://') || uri.startsWith('https://')) {
-      localUri = await downloadImage(uri);
-    }
-
-    const manipResult = await ImageManipulator.manipulateAsync(
-      localUri,
-      [{ rotate: rotation }],
-      { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
-    );
-
-    return manipResult.uri;
-  };
-
   // Replace the handleSave function in PhotoSelectorModal
-const handleSave = async () => {
-  setIsProcessing(true);
-  try {
-    const processedPhotos: (string | Photo)[] = [];
-
-    for (let i = 0; i < localPhotos.length; i++) {
-      const item = localPhotos[i];
-      const { photo, rotation } = item;
-
-      if (spot?.status === "Approved") {
-        // Approved: ensure Photo object with order
-        let finalPhoto: Photo = { ...(photo as Photo), order: i + 1 };
-
-        if (rotation !== 0) {
-          try {
-            const rotatedUri = await processAndRotateImage(photo.url, rotation);
-            finalPhoto.url = rotatedUri;
-          } catch (err) {
-            console.error("Rotation failed:", err);
-          }
-        }
-
-        processedPhotos.push(finalPhoto);
-      } else {
-        // Pending: store only URI string
-        let uri = typeof photo === "string" ? photo : photo.url;
-        if (rotation !== 0) {
-          try {
-            uri = await processAndRotateImage(uri, rotation);
-          } catch (err) {
-            console.error("Rotation failed:", err);
-          }
-        }
-        processedPhotos.push(uri);
-      }
-    }
-
-    onChange(processedPhotos);
+const handleSave = () => {
+    console.log("💾 Saving photos:", localPhotos);
+    onChange(localPhotos);
     onClose();
-  } catch (err) {
-    console.error("Error saving photos:", err);
-    alert("Failed to save photos");
-  } finally {
-    setIsProcessing(false);
-  }
-};
-
+  };
 
 
   return (
@@ -295,13 +198,13 @@ const handleSave = async () => {
 
         <FlatList
           data={localPhotos}
-          keyExtractor={(item) => item.clientId || (typeof item.photo === "string" ? item.photo : item.photo.url)}
+          keyExtractor={(item) => typeof item === "string" ? item : item.url}
 
           numColumns={2}
           contentContainerStyle={{ paddingVertical: 10 }}
           renderItem={({ item, index }) => {
-            const uri = typeof item.photo === "string" ? item.photo : item.photo.url;
-            const rotation = item.rotation;
+            const uri = typeof item === "string" ? item : item.url;
+            // const rotation = item.rotation;
             
             return (
               <View style={styles.imageContainer}>
@@ -309,7 +212,6 @@ const handleSave = async () => {
                   source={{ uri }}
                   style={[
                     styles.image,
-                    { transform: [{ rotate: `${rotation}deg` }] }
                   ]}
                   contentFit="cover"
                   cachePolicy="disk"
@@ -317,19 +219,12 @@ const handleSave = async () => {
 
                 <TouchableOpacity
                   style={styles.deleteButton}
-                  onPress={() => handleDeletePhoto(item.photo)}
+                  onPress={() => handleDeletePhoto(item)}
                   disabled={isProcessing}
                 >
                   <Text style={styles.buttonText}>×</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={styles.rotateButton}
-                  onPress={() => handleRotatePhoto(index)}
-                  disabled={isProcessing}
-                >
-                  <Text style={styles.buttonText}>⟳</Text>
-                </TouchableOpacity>
+
                 <TouchableOpacity
                   style={styles.downloadButton}
                   onPress={async () => {handleDownloadPhoto(uri)}}
@@ -339,25 +234,7 @@ const handleSave = async () => {
 
                 </TouchableOpacity>
 
-                {rotation !== 0 && (
-                  <View
-                    style={{
-                      position: "absolute",
-                      top: 5,
-                      left: 5,
-                      backgroundColor: "rgba(0,0,0,0.6)",
-                      paddingHorizontal: 6,
-                      paddingVertical: 2,
-                      borderRadius: 4,
-                    }}
-                  >
-                    <Text style={{ color: "white", fontSize: 10, fontWeight: "600" }}>
-                      {rotation}°
-                    </Text>
-                  </View>
-                )}
-
-                {spot?.status === "Approved" && (
+              
                   <View
                     style={{
                       position: "absolute",
@@ -393,7 +270,6 @@ const handleSave = async () => {
                       <Text style={{ color: "white", fontWeight: "600" }}>↓</Text>
                     </TouchableOpacity>
                   </View>
-                )}
               </View>
             );
           }}

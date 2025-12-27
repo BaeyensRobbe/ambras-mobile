@@ -157,7 +157,11 @@ const SpotsList: React.FC<Props> = ({
           <View style={styles.card}>
             {spot.photos?.length > 0 && (
               <Image
-                source={{ uri: spot.photos[0].url }}
+                source={{
+                  uri: spot.photos
+                    .slice() // avoid mutating original array
+                    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))[0].url // lowest order first
+                }}
                 style={image}
                 resizeMode="cover"
               />

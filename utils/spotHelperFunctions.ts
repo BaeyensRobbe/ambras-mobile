@@ -242,8 +242,12 @@ export const uploadOrderedPhotosToR2 = async (spot: Spot): Promise<Photo[]> => {
 
   const uploadedPhotos: Photo[] = [];
 
+  console.log(`Uploading ${spot.photos} photos to R2 for spot ${spot.id}...`);
+
   for (let index = 0; index < spot.photos.length; index++) {
     const photo = spot.photos[index];
+
+    console.log("order of photo: ", photo.order, "url :", photo.url);
 
     try {
     // ✅ Skip if photo is already on R2 with correct order
@@ -296,7 +300,7 @@ export const uploadOrderedPhotosToR2 = async (spot: Spot): Promise<Photo[]> => {
 
       // Store uploaded photo with order
       uploadedPhotos.push({
-        id: Date.now() + index,
+        id: photo.id,
         url: publicUrl,
         uuid,
         spotId: spot.id,

@@ -66,7 +66,7 @@ export type formDataSpot = {
   notes?: string;
   lat: number;
   lng: number;
-  photos: (Photo | String)[];
+  photos: (Photo)[];
 }
 
 export type editFormDataSpot = {

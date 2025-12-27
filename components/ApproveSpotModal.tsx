@@ -17,9 +17,13 @@ const { width } = Dimensions.get("window");
 const ApproveSpotModal: React.FC<ApproveSpotModalProps> = ({ visible, spot, onClose, onApprove }) => {
   const [photos, setPhotos] = useState<Photo[]>([]);
 
-  useEffect(() => {
-    if (spot) setPhotos([...spot.photos]);
-  }, [spot]);
+useEffect(() => {
+  if (spot) {
+    const sortedPhotos = [...spot.photos].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    setPhotos(sortedPhotos);
+  }
+}, [spot]);
+
 
   if (!spot) return null;
 
@@ -35,18 +39,6 @@ const ApproveSpotModal: React.FC<ApproveSpotModalProps> = ({ visible, spot, onCl
     { key: "isFavorite", label: "Favorite", type: "favorite" },
     { key: "lat", label: "Location", type: "location" },
   ];
-
-  const movePhoto = (index: number, direction: "up" | "down") => {
-    setPhotos((prev) => {
-      const newPhotos = [...prev];
-      const targetIndex = direction === "up" ? index - 1 : index + 1;
-
-      if (targetIndex < 0 || targetIndex >= newPhotos.length) return prev; // out of range
-
-      [newPhotos[index], newPhotos[targetIndex]] = [newPhotos[targetIndex], newPhotos[index]];
-      return newPhotos;
-    });
-  };
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
@@ -158,43 +150,7 @@ const ApproveSpotModal: React.FC<ApproveSpotModalProps> = ({ visible, spot, onCl
                     contentFit="cover"
                     cachePolicy="disk"
                   />
-
-                  {/* Overlay buttons in top-right */}
-                  <View
-                    style={{
-                      position: "absolute",
-                      top: 8,
-                      right: 8,
-                      flexDirection: "column",
-                    }}
-                  >
-                    <TouchableOpacity
-                      onPress={() => movePhoto(index, "up")}
-                      disabled={index === 0}
-                      style={{
-                        backgroundColor: index === 0 ? "#aaa" : ambrasGreen,
-                        paddingHorizontal: 8,
-                        paddingVertical: 4,
-                        borderRadius: 6,
-                        marginBottom: 5,
-                      }}
-                    >
-                      <Text style={{ color: "white", fontWeight: "600" }}>↑</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      onPress={() => movePhoto(index, "down")}
-                      disabled={index === photos.length - 1}
-                      style={{
-                        backgroundColor: index === photos.length - 1 ? "#aaa" : ambrasGreen,
-                        paddingHorizontal: 8,
-                        paddingVertical: 4,
-                        borderRadius: 6,
-                      }}
-                    >
-                      <Text style={{ color: "white", fontWeight: "600" }}>↓</Text>
-                    </TouchableOpacity>
-                  </View>
+                  
                 </View>
 
                 <Text style={{ color: "white", marginTop: 5 }}>#{index + 1}</Text>
@@ -214,6 +170,7 @@ const ApproveSpotModal: React.FC<ApproveSpotModalProps> = ({ visible, spot, onCl
                   url: p.url,
                   spotId: p.spotId,
                   uuid: p.uuid,
+                  order: p.order,
                 })),
               })
             }
