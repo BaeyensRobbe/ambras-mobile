@@ -84,14 +84,10 @@ export const saveSpotChanges = async (
 
   // 1. Determine new vs kept vs removed
   const keptPhotos = updatedSpot.photos.filter(p => originalPhotos.includes(typeof p === "string" ? p : p.url));
-  const newLocalPhotos1 = updatedSpot.photos.filter(
-    (p): p is string => typeof p === "string" && p.startsWith("file://")
-  );
-  const newLocalPhotosForR2 = updatedSpot.photos.filter(
-    (p): p is Photo => typeof p !== "string" && p.url.startsWith("file://")
-  )
+  const newLocalPhotos = updatedSpot.photos
+    .filter(p => (typeof p === "string" && p.startsWith("file://")) || (typeof p !== "string" && p.url.startsWith("file://")))
+    .map(p => (typeof p === "string" ? p : p.url));
 
-  const newLocalPhotos = [...newLocalPhotos1, ...newLocalPhotosForR2.map(p => p.url)];
   const removedPhotos = originalSpot.photos.filter(p => !updatedPhotos.includes(p.url));
 
   console.log("Kept photos:", keptPhotos);
@@ -100,11 +96,8 @@ export const saveSpotChanges = async (
 
   // 2. Delete removed photos
   if (removedPhotos.length > 0) {
-    if (isApproved) {
-      await deletePhotosFromR2(removedPhotos);
-    } else {
-      await deletePhotosFromSupabase(removedPhotos);
-    }
+    if (isApproved) await deletePhotosFromR2(removedPhotos);
+    else await deletePhotosFromSupabase(removedPhotos);
   }
 
   // 3. Upload photos
@@ -125,27 +118,22 @@ export const saveSpotChanges = async (
 
     finalPhotos = [...keptAsPhotos, ...uploadedNew];
   } else {
-    // Approved: R2 only
-    if (keptPhotos.length > 0 || removedPhotos.length > 0) {
-      await deletePhotosFromR2(removedPhotos);
-    }
-
+    // Approved: R2 only, maintain order
     const existingUuid = (keptPhotos[0] as Photo | undefined)?.uuid ?? String(updatedSpot.id);
 
-    const mergedPhotos: Photo[] = [
-      ...keptPhotos.map(p => typeof p === "string" ? { id: 0, url: p, uuid: existingUuid, spotId: updatedSpot.id } : p),
-      ...newLocalPhotos.map(uri => ({
-        id: 0,
-        url: uri,
-        uuid: existingUuid,
-        spotId: updatedSpot.id,
-      })),
-    ];
+// Keep modal order
+const orderedPhotos: Photo[] = [
+  ...keptPhotos.map(p => (typeof p === "string" ? { id: 0, url: p, uuid: existingUuid, spotId: updatedSpot.id } : p)),
+  ...newLocalPhotos.map((url, idx) => ({
+    id: 0,
+    url,
+    uuid: existingUuid,
+    spotId: updatedSpot.id,
+    order: keptPhotos.length + idx + 1, // append after kept photos
+  })),
+];
 
-    // Apply proper order
-    const orderedMerged = mergedPhotos.map((photo, index) => ({ ...photo, order: index + 1 }));
-
-    finalPhotos = await uploadOrderedPhotosToR2({ ...(updatedSpot as Spot), photos: orderedMerged });
+finalPhotos = await uploadOrderedPhotosToR2({ ...(updatedSpot as Spot), photos: orderedPhotos });
   }
 
   // 4. Save spot

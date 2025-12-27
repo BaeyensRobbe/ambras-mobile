@@ -198,12 +198,15 @@ export const deletePhotosFromR2 = async (photos: Photo[]) => {
       return;
     }
 
+    console.log("Deleting R2 paths:", pathsToDelete);
+
     // Delete each file from R2
     for (const key of pathsToDelete) {
+      const extractedKey = extractKeyFromSignedUrl(key);
       const res = await fetch(`${apiUrl}/r2/file`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key }),
+        body: JSON.stringify({ key: extractedKey }),
       });
 
       if (!res.ok) {
@@ -215,6 +218,18 @@ export const deletePhotosFromR2 = async (photos: Photo[]) => {
     console.error("❌ Error deleting photos from R2:", error);
   }
 };
+
+const extractKeyFromSignedUrl = (urlOrPath: string): string => {
+  try {
+    // If it's a full URL
+    const pathname = new URL(urlOrPath).pathname;
+    return pathname.startsWith('/') ? pathname.slice(1) : pathname;
+  } catch {
+    // If it's just a relative path
+    return urlOrPath;
+  }
+};
+
 
 // Uploads ordered photos to R2 and returns array of Photo objects with URLs
 export const uploadOrderedPhotosToR2 = async (spot: Spot): Promise<Photo[]> => {
@@ -285,7 +300,7 @@ export const uploadOrderedPhotosToR2 = async (spot: Spot): Promise<Photo[]> => {
         url: publicUrl,
         uuid,
         spotId: spot.id,
-        order: index + 1, // store order explicitly
+        order: photo.order, // store order explicitly
       });
 
     } catch (err) {
@@ -294,7 +309,7 @@ export const uploadOrderedPhotosToR2 = async (spot: Spot): Promise<Photo[]> => {
     }
   }
 
-  console.log("Uploaded photos to R2:", uploadedPhotos);
+  console.log("Uploaded photos to R2:", uploadedPhotos);  
 
   return uploadedPhotos;
 };
