@@ -23,6 +23,7 @@ export type Spot = {
   hasSwings: boolean;
   hasWaterChallenge: boolean;
   websiteLink?: string;
+  uploadedBy?: string;
   status: 'Pending' | 'Approved' | 'Rejected';
   notes?: string;
   lat: number;

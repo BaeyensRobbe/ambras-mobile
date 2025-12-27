@@ -2,24 +2,43 @@ import { API_BASE_URL } from '@env';
 import { addSpotData, formDataSpot, Photo, Spot } from '../types/types';
 import { supabase } from '../utils/supabase';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as ImageManipulator from "expo-image-manipulator";
 
-const updateurl = API_BASE_URL.startsWith("http") ? `${API_BASE_URL}/spots/update` : `https://${API_BASE_URL}/spots/update`;
 const apiUrl = API_BASE_URL.startsWith("http") ? API_BASE_URL : `https://${API_BASE_URL}`;
 
-// Calls backend to add spot with the spot data (including photo object)
-export const addSpot = async (spot: Spot) => {
-  const res = await fetch(`${apiUrl}/spots`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(spot),
-  })
+const optimizeImageForUpload = async (uri: string) => {
+  const result = await ImageManipulator.manipulateAsync(
+    uri,
+    [{ resize: { width: 2560 } }],
+    {
+      compress: 0.8,
+      format: ImageManipulator.SaveFormat.JPEG,
+    }
+  );
 
-  if (!res.ok) {
-    throw new Error('Failed to add spot');
+  return result.uri;
+};
+
+async function downloadTempFile(remoteUrl: string): Promise<string> {
+  const localUri = `${FileSystem.cacheDirectory}${Date.now()}.jpg`;
+  const { uri } = await FileSystem.downloadAsync(remoteUrl, localUri);
+  return uri;
+}
+
+async function fileToBase64(fileUri: string): Promise<string> {
+  return await FileSystem.readAsStringAsync(fileUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+}
+
+
+function decodeBase64(base64: string): Uint8Array {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
   }
-  return { ...spot, id: (await res.json()).id };
+  return bytes;
 }
 
 // Fetch total number of spots from Supabase
@@ -58,22 +77,6 @@ export const insertPhotoRecords = async (photos: { url: string; uuid: string; sp
   return supabase.from('Photo').insert(photos).select('*');
 }
 
-// Save spot data to backend (update existing spot)
-export const saveSpot = async (spot: Spot) => {
-  
-  const res = await fetch(`${updateurl}/${spot.id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(spot),
-  })
-
-  if (!res.ok) {
-    throw new Error('Failed to save spot');
-  }
-}
-
 export const deletePhotosFromSupabase = async (photos: Photo[]) => {
   try {
     // Extract the exact path within the 'spots' bucket
@@ -98,6 +101,7 @@ export const deletePhotosFromSupabase = async (photos: Photo[]) => {
   }
 };
 
+// Deletes entire folder from Supabase storage given folder path and uuid
 export const deleteFolderFromSupabase = async (folderPath: string, uuid: string) => {
 
   const { data, error } = await supabase.storage
@@ -165,98 +169,7 @@ export const uploadPhotosToSupabase = async (formData: formDataSpot | addSpotDat
   return uploadedPhotos;
 };
 
-// Finalize approval: upload photos to R2, update spot status, delete from Supabase
-export const finalizeApproval = async (spot: Spot) => {
-  const uuid = spot.photos[0]?.uuid;
-  if (!uuid) return;
-  try {
-    const uploaded = await uploadOrderedPhotosToR2(spot);
-
-    
-    // fix url
-    const res = await fetch(`${updateurl}/${spot.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...spot, photos: uploaded, status: 'Approved' }),
-    });
-    await deleteFolderFromSupabase('Submissions', uuid);
-    
-    if (!res.ok) {
-      console.error("Failed to finalize approval, server responded with:", res.status);
-      throw new Error('Failed to finalize approval');
-    }
-
-  } catch (error) {
-    console.error("Error finalizing approval:", error);
-  }
-}
-
-export const uploadPhotosToR2 = async (formData: formDataSpot | addSpotData, uuid: string) => {
-  const uploadedPhotos: Photo[] = [];
-  const folderName = `Submissions/${uuid}`;
-  const spotId = formData.id;
-
-  // Filter new photos (strings / local URIs)
-  const newPhotos = formData.photos.filter(p => typeof p === 'string') as string[];
-
-  for (const photo of newPhotos) {
-    try {
-      // Read the local photo file
-      const base64 = await FileSystem.readAsStringAsync(photo, { encoding: "base64" });
-      const fileBytes = decodeBase64(base64);
-
-      // Generate a random file name
-      const fileName = `${formData.name}-${Math.floor(Math.random() * 100)}.jpg`;
-      const mimeType = "image/jpeg";
-
-      // Ask backend for a signed URL
-      const signRes = await fetch(`${apiUrl}/r2/sign-upload`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileName,
-          folderName,
-          fileType: mimeType,
-        }),
-      });
-
-      if (!signRes.ok) {
-        console.error(`❌ Failed presign for ${fileName}`);
-        throw new Error('Failed to get signed URL');
-      }
-
-      const { uploadUrl, publicUrl } = await signRes.json();
-
-      // Upload to R2 using the signed URL
-      const uploadRes = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': mimeType },
-        body: fileBytes,
-      });
-
-      if (!uploadRes.ok) {
-        console.error(`❌ Upload failed for ${fileName}`);
-        throw new Error(`Upload failed for ${fileName}`);
-      }
-
-      // Construct final photo object
-      const photoObject: Photo = {
-        id: Date.now(), // temp local id
-        url: publicUrl,
-        uuid,
-        spotId,
-      };
-
-      uploadedPhotos.push(photoObject);
-
-    } catch (error) {
-      console.error("❌ Error uploading photo to R2:", error);
-    }
-  }
-
-  return uploadedPhotos;
-};
-
+// Deletes photos from R2 storage given array of Photo objects
 export const deletePhotosFromR2 = async (photos: Photo[]) => {
   try {
 
@@ -303,9 +216,11 @@ export const deletePhotosFromR2 = async (photos: Photo[]) => {
   }
 };
 
-
+// Uploads ordered photos to R2 and returns array of Photo objects with URLs
 export const uploadOrderedPhotosToR2 = async (spot: Spot): Promise<Photo[]> => {
   if (!spot.photos || spot.photos.length === 0) return [];
+
+  console.log("photos to upload to R2:", spot.photos);
 
   const folderName = spot.id;
   const uuid = spot.photos[0]?.uuid;
@@ -316,14 +231,24 @@ export const uploadOrderedPhotosToR2 = async (spot: Spot): Promise<Photo[]> => {
     const photo = spot.photos[index];
 
     try {
+    // ✅ Skip if photo is already on R2 with correct order
+    if (photo.url.includes('.r2.dev') && photo.order === index + 1) {
+      uploadedPhotos.push(photo);
+      continue;
+    }
       // Determine file path
-      const localPath =
+      // 1. Get local file
+      const originalLocalPath =
         photo.url.startsWith("file://") || photo.url.startsWith("content://")
           ? photo.url
           : await downloadTempFile(photo.url);
 
-      // Convert to bytes
-      const base64 = await fileToBase64(localPath);
+      // 2. Optimize image BEFORE upload
+      const optimizedPath = await optimizeImageForUpload(originalLocalPath);
+
+      // 3. Convert optimized image to base64
+      const base64 = await fileToBase64(optimizedPath);
+
       if (!base64) throw new Error(`File read failed for ${photo.url}`);
 
       const fileBytes = decodeBase64(base64);
@@ -369,50 +294,7 @@ export const uploadOrderedPhotosToR2 = async (spot: Spot): Promise<Photo[]> => {
     }
   }
 
+  console.log("Uploaded photos to R2:", uploadedPhotos);
+
   return uploadedPhotos;
 };
-
-
-
-export const fetchCitiesOnly = async (): Promise<string[]> => {
-  try {
-    console.log("Fetching cities from backend..., apiUrl:", apiUrl);
-    const res = await fetch(`${apiUrl}/spots/cities`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    if (!res.ok) throw new Error('Failed to fetch cities');
-    const data = await res.json();
-    return (data as string[]).filter(city => city !== "");
-  } catch (error) {
-    console.error("Error fetching cities:", error);
-    return [];
-  }
-}
-
-/**
- * Helper to download a remote photo to local tmp for encoding
- */
-async function downloadTempFile(remoteUrl: string): Promise<string> {
-  const localUri = `${FileSystem.cacheDirectory}${Date.now()}.jpg`;
-  const { uri } = await FileSystem.downloadAsync(remoteUrl, localUri);
-  return uri;
-}
-
-async function fileToBase64(fileUri: string): Promise<string> {
-  return await FileSystem.readAsStringAsync(fileUri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-}
-
-
-function decodeBase64(base64: string): Uint8Array {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
-}

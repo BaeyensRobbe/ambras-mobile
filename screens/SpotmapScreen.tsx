@@ -12,7 +12,7 @@ import {
 import { Image } from "expo-image";
 import MapView, { PROVIDER_GOOGLE } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
-import { fetchSpots } from "../api/spots";
+import { fetchSpots, fetchCitiesOnly } from "../api/spots";
 import { simulateProgress } from "../utils/toastHelperFunctions";
 import Toast from "react-native-toast-message";
 import { LocationContext } from "../components/location/LocationContext";
@@ -21,7 +21,6 @@ import { ApprovedSpot, Category, Spot } from "../types/types";
 import { ambrasGreen, styles as globalStyles } from "../styles";
 import SpotDetailsOverlay from "../components/SpotDetailsOverlay";
 import { PickerInputModal } from "../components/PickerInputModal";
-import { fetchCitiesOnly } from "../utils/spotHelperFunctions";
 import SpotSearchModal from "../components/spotmap/SpotSearchModal";
 import MultiSelectModal from "../components/MultiSelectModal";
 import { getFirstPhoto } from "../utils/spotmap";

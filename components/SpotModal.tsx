@@ -6,7 +6,7 @@ import { PickerInputModal } from "./PickerInputModal";
 import { TextInputModal } from "./TextInputModal";
 import LocationPickerModal from "./LocationPickerModal";
 import PhotoSelectorModal from "./PhotoSelector";
-import { fetchCitiesOnly } from "../utils/spotHelperFunctions";
+import { fetchCitiesOnly } from "../api/spots";
 import NotesInputModal from "./notesInputModal";
 
 // Define props

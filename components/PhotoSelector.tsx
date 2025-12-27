@@ -29,6 +29,7 @@ interface PhotoSelectorModalProps {
 interface PhotoWithRotation {
   photo: string | Photo;
   rotation: number; // 0, 90, 180, 270
+  clientId: string;
 }
 
 const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
@@ -52,21 +53,41 @@ const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
     }
   }, [photos, spot]);
 
-  const handleAddPhoto = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-      allowsMultipleSelection: true,
-    });
+const handleAddPhoto = async () => {
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    quality: 0.8,
+    allowsMultipleSelection: true,
+  });
 
-    if (!result.canceled) {
-      const newPhotos = result.assets.map((a) => ({
-        photo: a.uri,
-        rotation: 0,
-      }));
-      setLocalPhotos((prev) => [...prev, ...newPhotos]);
-    }
-  };
+  if (!result.canceled) {
+    const newPhotos = result.assets.map((a, i) => {
+      if (spot?.status === "Approved") {
+        // Approved: create Photo object
+        return {
+          photo: {
+            id: 0,
+            url: a.uri,
+            uuid: photos[0]?.uuid || String(spot.id),
+            spotId: spot.id,
+            order: localPhotos.length + i + 1,
+          },
+          rotation: 0,
+          clientId: `${a.uri}-${Date.now()}`,
+        };
+      } else {
+        // Pending: just store string URI
+        return {
+          photo: a.uri,
+          rotation: 0,
+          clientId: `${a.uri}-${Date.now()}`,
+        };
+      }
+    });
+    setLocalPhotos((prev) => [...prev, ...newPhotos]);
+  }
+};
+
 
   const handleDeletePhoto = (photoToDelete: string | Photo) => {
     const uriToDelete =
@@ -203,46 +224,46 @@ const handleSave = async () => {
     for (let i = 0; i < localPhotos.length; i++) {
       const item = localPhotos[i];
       const { photo, rotation } = item;
-      const uri = typeof photo === "string" ? photo : photo.url;
 
-      // If photo was rotated, we need to re-upload it
-      if (rotation !== 0) {
-        try {
-          // Rotate the image
-          const rotatedUri = await processAndRotateImage(uri, rotation);
-          
-          // Return as a string URI - this will trigger re-upload in SpotScreen
-          // SpotScreen will handle uploading and deleting the old version
-          processedPhotos.push(rotatedUri);
-        } catch (error) {
-          console.error("Failed to rotate photo:", error);
-          // Fallback: keep the original photo without rotation
-          if (spot?.status === "Approved" && typeof photo !== "string") {
-            processedPhotos.push({ ...photo, order: i + 1 });
-          } else {
-            processedPhotos.push(photo);
+      if (spot?.status === "Approved") {
+        // Approved: ensure Photo object with order
+        let finalPhoto: Photo = { ...(photo as Photo), order: i + 1 };
+
+        if (rotation !== 0) {
+          try {
+            const rotatedUri = await processAndRotateImage(photo.url, rotation);
+            finalPhoto.url = rotatedUri;
+          } catch (err) {
+            console.error("Rotation failed:", err);
           }
         }
+
+        processedPhotos.push(finalPhoto);
       } else {
-        // No rotation - keep original photo
-        if (spot?.status === "Approved" && typeof photo !== "string") {
-          // Keep existing Photo object with updated order
-          processedPhotos.push({ ...photo, order: i + 1 });
-        } else {
-          processedPhotos.push(photo);
+        // Pending: store only URI string
+        let uri = typeof photo === "string" ? photo : photo.url;
+        if (rotation !== 0) {
+          try {
+            uri = await processAndRotateImage(uri, rotation);
+          } catch (err) {
+            console.error("Rotation failed:", err);
+          }
         }
+        processedPhotos.push(uri);
       }
     }
 
     onChange(processedPhotos);
     onClose();
-  } catch (error) {
-    console.error("Error processing photos:", error);
-    alert("Failed to process photos. Please try again.");
+  } catch (err) {
+    console.error("Error saving photos:", err);
+    alert("Failed to save photos");
   } finally {
     setIsProcessing(false);
   }
 };
+
+
 
   return (
     <Modal visible={visible} animationType="slide">
@@ -274,12 +295,8 @@ const handleSave = async () => {
 
         <FlatList
           data={localPhotos}
-          keyExtractor={(item, index) => {
-            const photo = item.photo;
-            return typeof photo === "string"
-              ? `${photo}-${index}`
-              : photo.id?.toString() || photo.url;
-          }}
+          keyExtractor={(item) => item.clientId || (typeof item.photo === "string" ? item.photo : item.photo.url)}
+
           numColumns={2}
           contentContainerStyle={{ paddingVertical: 10 }}
           renderItem={({ item, index }) => {
