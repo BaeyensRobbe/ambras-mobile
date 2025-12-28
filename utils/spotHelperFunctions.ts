@@ -9,7 +9,7 @@ const apiUrl = API_BASE_URL.startsWith("http") ? API_BASE_URL : `https://${API_B
 const optimizeImageForUpload = async (uri: string) => {
   const result = await ImageManipulator.manipulateAsync(
     uri,
-    [{ resize: { width: 2560 } }],
+    [{ resize: { width: 1920 } }],
     {
       compress: 0.8,
       format: ImageManipulator.SaveFormat.JPEG,
