@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import * as ImageManipulator from "expo-image-manipulator";
 import { downloadAsync, cacheDirectory } from "expo-file-system/legacy";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -22,7 +21,7 @@ interface PhotoSelectorModalProps {
   photos: Photo[];
   spot: any;
   onClose: () => void;
-  onChange: (updatedPhotos: (string | Photo)[]) => void;
+  onChange: (updatedPhotos: (Photo)[]) => void;
 }
 
 // Track rotation for each photo
@@ -44,9 +43,12 @@ const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
 
   // Normalizes photo orders starting from 1
 const normalizeOrders = (photos: Photo[]): Photo[] => {
-  return photos.map((p, i) => ({ ...p, order: i + 1 }));
+  const ordered = [...photos]
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)) // ensure correct sequence
+    .map((p, i) => ({ ...p, order: i + 1 }));
+    console.log("Normalized photo orders:", ordered.map(p => ({ url: p.url, order: p.order })));
+  return ordered;
 };
-
 
 useEffect(() => {
   console.log("📂 Modal opened with photos:", photos);
@@ -63,21 +65,25 @@ const handleAddPhoto = async () => {
 
   if (!result.canceled) {
     setLocalPhotos((prev) => {
+      // always sort previous photos by current order
+      const sortedPrev = [...prev].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+      // create new photos with temporary order = 0
       const newPhotos: Photo[] = result.assets.map((a, i) => ({
         id: 0,
         url: a.uri,
-        uuid: String(Date.now()) + '-' + i, // unique per photo
+        uuid: String(Date.now()) + '-' + i,
         spotId: spot.id,
-        order: prev.length + i + 1,
+        order: 0,
       }));
 
-      const combined = [...prev, ...newPhotos];
+      const combined = [...sortedPrev, ...newPhotos];
+
+      // normalize order after addition
       return normalizeOrders(combined);
     });
   }
 };
-
-
 
   const handleDeletePhoto = (photoToDelete: Photo) => {
     console.log("🗑 Deleting photo:", photoToDelete.url);
@@ -88,16 +94,23 @@ const handleAddPhoto = async () => {
 
 
 const handleMove = (index: number, direction: "up" | "down") => {
-  setLocalPhotos((prev) => {
-    const newPhotos = [...prev];
+  setLocalPhotos(prev => {
+    const next = [...prev];
     const target = direction === "up" ? index - 1 : index + 1;
-    if (target < 0 || target >= newPhotos.length) return prev;
 
-    [newPhotos[index], newPhotos[target]] = [newPhotos[target], newPhotos[index]];
+    if (target < 0 || target >= next.length) return prev;
 
-    return normalizeOrders(newPhotos);
+    // swap
+    [next[index], next[target]] = [next[target], next[index]];
+
+    // reassign order strictly from array position
+    return next.map((p, i) => ({
+      ...p,
+      order: i + 1,
+    }));
   });
 };
+
 
   // const handleRotatePhoto = (index: number) => {
   //   setLocalPhotos((prev) => {

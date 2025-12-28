@@ -125,49 +125,60 @@ export const deleteFolderFromSupabase = async (folderPath: string, uuid: string)
 }
 
 // Uploads photos to supabase and returns array of Photo objects with URLS
-export const uploadPhotosToSupabase = async (formData: formDataSpot | addSpotData, uuid: string) => {
-  const uploadedPhotos: Photo[] = [];
+export const uploadPhotosToSupabase = async (
+  photos: Photo[],
+  uuid: string,
+  spotId: number
+): Promise<Photo[]> => {
+  const uploaded: Photo[] = [];
   const folderName = `Submissions/${uuid}`;
-  const spotId = formData.id;
 
-  const newPhotos = formData.photos.filter(p => typeof p === 'string') as string[];
+  console.log(`Uploading ${photos} photos to Supabase under ${folderName}...`);
 
-  for (const photo of newPhotos) {
-    try {
-      const base64 = await FileSystem.readAsStringAsync(photo, {
-        encoding: "base64",
-      });
+  for (const photo of photos) {
+    // Skip already uploaded photos
+    if (!photo.url.startsWith("file://")) {
+      uploaded.push(photo);
+      continue;
+    }
 
-      // Convert to binary buffer
-      const fileBytes = decodeBase64(base64);
+    console.log("Uploading photo:", photo);
+    console.log("Photo order:", photo.order);
 
-      const fileName = `${Date.now()}-${Math.floor(Math.random() * 10000)}.jpg`;
-      const path = `${folderName}/${fileName}`;
+    const base64 = await FileSystem.readAsStringAsync(photo.url, {
+      encoding: "base64",
+    });
 
-      const { data, error } = await supabase.storage.from('spots').upload(path, fileBytes, {
-        contentType: 'image/jpeg',
+    const fileBytes = decodeBase64(base64);
+
+    const fileName = `${String(photo.order).padStart(2, "0")}_${Date.now()}.jpg`;
+    const path = `${folderName}/${fileName}`;
+
+    const { error } = await supabase.storage
+      .from("spots")
+      .upload(path, fileBytes, {
+        contentType: "image/jpeg",
         upsert: false,
       });
 
-      const { data: publicUrlData } = supabase.storage
-        .from("spots")
-        .getPublicUrl(path);
+    if (error) throw error;
 
-      const photoObject = {
-        id: 0, // Placeholder, will be set by the database
-        url: publicUrlData.publicUrl,
-        uuid: uuid,
-        spotId: spotId,
-      };
+    const { data } = supabase.storage.from("spots").getPublicUrl(path);
 
-      uploadedPhotos.push(photoObject);
-    } catch (error) {
-      console.error("Error uploading photo:", error);
-    }
-
+    uploaded.push({
+      ...photo,
+      url: data.publicUrl,
+      uuid,
+      spotId,
+      order: photo.order,
+    });
   }
-  return uploadedPhotos;
+
+  console.log("Uploaded photos to Supabase:", uploaded);
+
+  return uploaded;
 };
+
 
 // Deletes photos from R2 storage given array of Photo objects
 export const deletePhotosFromR2 = async (photos: Photo[]) => {
@@ -252,11 +263,15 @@ export const uploadOrderedPhotosToR2 = async (spot: Spot): Promise<Photo[]> => {
     try {
     // ✅ Skip if photo is already on R2 with correct order
     if (photo.url.includes('.r2.dev') && photo.order === index + 1) {
+      console.log("Photo already on R2 with correct order, skipping upload:", photo);
       uploadedPhotos.push(photo);
       continue;
     }
       // Determine file path
       // 1. Get local file
+      console.log("Uploading photo:", photo);
+      console.log("Photo URL:", photo.url);
+      console.log("Photo order:", photo.order);
       const originalLocalPath =
         photo.url.startsWith("file://") || photo.url.startsWith("content://")
           ? photo.url

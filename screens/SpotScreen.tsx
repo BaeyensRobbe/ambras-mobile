@@ -99,6 +99,8 @@ const SpotScreen = () => {
 
     setUploadingPhotos({ active: true, spotName: updatedSpot.name });
 
+    console.log("Saving changes for spot:", selectedSpot.id, "with data:", updatedSpot);
+
     try {
       await saveSpotChanges(selectedSpot, updatedSpot, fetchData);
 

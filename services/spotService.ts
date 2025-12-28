@@ -100,7 +100,7 @@ export const saveSpotChanges = async (
     const folderUUID = keptPhotos[0]?.uuid ?? (uuid.v4() as string);
 
     const uploadedNew = newLocalPhotos.length
-      ? await uploadPhotosToSupabase({ ...updatedSpot, photos: newLocalPhotos.map(p => p.url) }, folderUUID)
+      ? await uploadPhotosToSupabase(newLocalPhotos, folderUUID, updatedSpot.id)
       : [];
 
     finalPhotos = [...keptPhotos.map(p => ({ ...p, uuid: folderUUID })), ...uploadedNew];
@@ -113,9 +113,11 @@ export const saveSpotChanges = async (
       ...(typeof p === "string" ? { id: 0, url: p } : p),
       uuid: existingUuid,
       spotId: updatedSpot.id,
+      order: p.order,
     }));
 
     finalPhotos = await uploadOrderedPhotosToR2({ ...(updatedSpot as Spot), photos: orderedPhotos });
+    console.log("Final uploaded photos to R2:", finalPhotos);
   }
 
   // 4. Save spot with proper order
