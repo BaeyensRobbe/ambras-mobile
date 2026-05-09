@@ -169,10 +169,45 @@ const SpotsList: React.FC<Props> = ({
 
             <Text style={styles.darkTitle}>{spot.name}</Text>
 
-            <Text style={meta}>
-              {spot.category ?? "Needs category"} ·{" "}
-              {spot.city ?? "Unknown city"}
-            </Text>
+            {/* Replace this section in renderItem */}
+<Text style={meta}>
+  {/* Category */}
+  {spot.category ? (
+    spot.category
+  ) : (
+    <Text style={{ color: "red" }}>Needs category</Text>
+  )}
+
+  {" · "}
+
+  {/* City */}
+  {spot.city ? (
+    spot.city
+  ) : (
+    <Text style={{ color: "red" }}>Unknown city</Text>
+  )}
+
+  {" · "}
+
+  {/* Uploaded By */}
+  {spot.uploadedBy ? (
+    spot.uploadedBy
+  ) : (
+    <Text style={{ color: "red" }}>Needs uploader</Text>
+  )}
+
+  {/* Photos count (optional) */}
+{spot.photos.length > 0 && spot.photos.some(p => p.order === null) && (
+  <Text style={{ color: "red" }}> · Needs ordered photos</Text>
+)}
+
+{spot.photos.length === 0 && (
+  <Text style={{ color: "red" }}> · No photos uploaded</Text>
+)}
+
+
+</Text>
+
 
             {spot.notes && <Text style={notes}>{spot.notes}</Text>}
 
@@ -188,7 +223,9 @@ const SpotsList: React.FC<Props> = ({
 
                   {mode === "suggestions" &&
                     spot.category &&
-                    spot.photos.length > 0 && (
+                    spot.photos.length > 0 && 
+                    spot.uploadedBy &&
+                    !spot.photos.some(photo => photo.order === null) && (
                       <TouchableOpacity
                         onPress={() => onApprove?.(spot.id)}
                         style={button("#006400")}

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import { downloadAsync, cacheDirectory } from "expo-file-system/legacy";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -15,23 +16,20 @@ import { Photo } from "../types/types";
 import { styles, ambrasGreen } from "../styles";
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
-import { Image as RNImage } from "react-native"; // For getSize
-
 
 interface PhotoSelectorModalProps {
   visible: boolean;
   photos: Photo[];
   spot: any;
   onClose: () => void;
-  onChange: (updatedPhotos: (Photo)[]) => void;
+  onChange: (updatedPhotos: (string | Photo)[]) => void;
 }
 
 // Track rotation for each photo
-// interface PhotoWithRotation {
-//   photo: string | Photo;
-//   rotation: number; // 0, 90, 180, 270
-//   clientId: string;
-// }
+interface PhotoWithRotation {
+  photo: string | Photo;
+  rotation: number; // 0, 90, 180, 270
+}
 
 const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
   visible,
@@ -40,134 +38,80 @@ const PhotoSelectorModal: React.FC<PhotoSelectorModalProps> = ({
   onClose,
   onChange,
 }) => {
-  const [localPhotos, setLocalPhotos] = useState<Photo[]>([]);
+  const [localPhotos, setLocalPhotos] = useState<PhotoWithRotation[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const [photoDimensions, setPhotoDimensions] = useState<Record<string, { width: number; height: number }>>({});
-
-const COMMON_RATIOS = [
-  { w: 1, h: 1, label: "1/1" },
-  { w: 4, h: 3, label: "4/3" },
-  { w: 3, h: 2, label: "3/2" },
-  { w: 16, h: 10, label: "16/10" },
-  { w: 16, h: 9, label: "16/9" },
-];
-
-function getNearestAspectRatio(width: number, height: number) {
-  const target = width / height;
-
-  let closest = COMMON_RATIOS[0];
-  let minDiff = Math.abs(target - COMMON_RATIOS[0].w / COMMON_RATIOS[0].h);
-
-  for (const r of COMMON_RATIOS) {
-    const diff = Math.abs(target - r.w / r.h);
-    if (diff < minDiff) {
-      minDiff = diff;
-      closest = r;
-    }
-  }
-
-  return closest.label;
-}
-
-
-useEffect(() => {
-  localPhotos.forEach(photo => {
-    const uri = photo.url;
-
-    if (!photoDimensions[uri]) {
-      RNImage.getSize(
-        uri,
-        (width, height) => {
-          setPhotoDimensions(prev => ({ ...prev, [uri]: { width, height } }));
-        },
-        (err) => console.warn("Failed to get image size:", uri, err)
+  useEffect(() => {
+    if (spot?.status === "Approved") {
+      const sorted = [...photos].sort(
+        (a, b) => (a.order ?? 0) - (b.order ?? 0)
       );
+      setLocalPhotos(sorted.map(p => ({ photo: p, rotation: 0 })));
+    } else {
+      setLocalPhotos(photos.map(p => ({ photo: p, rotation: 0 })));
     }
-  });
-}, [localPhotos]);
+  }, [photos, spot]);
 
-
-
-
-  // Normalizes photo orders starting from 1
-const normalizeOrders = (photos: Photo[]): Photo[] => {
-  const ordered = [...photos]
-    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)) // ensure correct sequence
-    .map((p, i) => ({ ...p, order: i + 1 }));
-  return ordered;
-};
-
-useEffect(() => {
-  const sortedPhotos = [...photos].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  setLocalPhotos(normalizeOrders(sortedPhotos));
-}, [photos, spot]);
-
-const handleAddPhoto = async () => {
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    quality: 0.8,
-    allowsMultipleSelection: true,
-  });
-
-  if (!result.canceled) {
-    setLocalPhotos((prev) => {
-      // always sort previous photos by current order
-      const sortedPrev = [...prev].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-
-      // create new photos with temporary order = 0
-      const newPhotos: Photo[] = result.assets.map((a, i) => ({
-        id: 0,
-        url: a.uri,
-        uuid: String(Date.now()) + '-' + i,
-        spotId: spot?.id || undefined,
-        order: 0,
-      }));
-
-      const combined = [...sortedPrev, ...newPhotos];
-
-      // normalize order after addition
-      return normalizeOrders(combined);
+  const handleAddPhoto = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      allowsMultipleSelection: true,
     });
-  }
-};
 
-  const handleDeletePhoto = (photoToDelete: Photo) => {
-    console.log("🗑 Deleting photo:", photoToDelete.url);
-      setLocalPhotos((prev) =>
-    normalizeOrders(prev.filter((p) => p.url !== photoToDelete.url))
-  );
+    if (!result.canceled) {
+      const newPhotos = result.assets.map((a) => ({
+        photo: a.uri,
+        rotation: 0,
+      }));
+      setLocalPhotos((prev) => [...prev, ...newPhotos]);
+    }
   };
 
+  const handleDeletePhoto = (photoToDelete: string | Photo) => {
+    const uriToDelete =
+      typeof photoToDelete === "string" ? photoToDelete : photoToDelete.url;
 
-const handleMove = (index: number, direction: "up" | "down") => {
-  setLocalPhotos(prev => {
-    const next = [...prev];
-    const target = direction === "up" ? index - 1 : index + 1;
+    setLocalPhotos((prev) =>
+      prev.filter((item) => {
+        const uri = typeof item.photo === "string" ? item.photo : item.photo.url;
+        return uri !== uriToDelete;
+      })
+    );
+  };
 
-    if (target < 0 || target >= next.length) return prev;
+  const handleMove = (index: number, direction: "up" | "down") => {
+    setLocalPhotos((prev) => {
+      const newPhotos = [...prev];
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= newPhotos.length) return prev;
 
-    // swap
-    [next[index], next[target]] = [next[target], next[index]];
+      const temp = newPhotos[index];
+      newPhotos[index] = newPhotos[targetIndex];
+      newPhotos[targetIndex] = temp;
 
-    // reassign order strictly from array position
-    return next.map((p, i) => ({
-      ...p,
-      order: i + 1,
-    }));
-  });
-};
+      // If Approved, also update order fields
+      if (spot?.status === "Approved") {
+        newPhotos.forEach((item, i) => {
+          if (typeof item.photo !== "string") {
+            item.photo.order = i + 1;
+          }
+        });
+      }
+      return newPhotos;
+    });
+  };
 
-
-  // const handleRotatePhoto = (index: number) => {
-  //   setLocalPhotos((prev) => {
-  //     const newPhotos = [...prev];
-  //     newPhotos[index] = {
-  //       ...newPhotos[index],
-  //     };
-  //     return newPhotos;
-  //   });
-  // };
+  const handleRotatePhoto = (index: number) => {
+    setLocalPhotos((prev) => {
+      const newPhotos = [...prev];
+      newPhotos[index] = {
+        ...newPhotos[index],
+        rotation: (newPhotos[index].rotation + 90) % 360,
+      };
+      return newPhotos;
+    });
+  };
 
 // Add this import at the top of PhotoSelectorModal.tsx
 
@@ -220,13 +164,85 @@ const handleDownloadPhoto = async (uri: string) => {
   }
 };
 
-  // Replace the handleSave function in PhotoSelectorModal
-const handleSave = () => {
-    console.log("💾 Saving photos:", localPhotos);
-    onChange(localPhotos);
-    onClose();
+  const downloadImage = async (url: string): Promise<string> => {
+    // Download remote image to local cache
+    const filename = url.split('/').pop() || `temp-${Date.now()}.jpg`;
+    const fileUri = `${cacheDirectory}${filename}`;
+    
+    const downloadResult = await downloadAsync(url, fileUri);
+    return downloadResult.uri;
   };
 
+  const processAndRotateImage = async (
+    uri: string,
+    rotation: number
+  ): Promise<string> => {
+    if (rotation === 0) return uri;
+
+    // If it's a remote URL, download it first
+    let localUri = uri;
+    if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      localUri = await downloadImage(uri);
+    }
+
+    const manipResult = await ImageManipulator.manipulateAsync(
+      localUri,
+      [{ rotate: rotation }],
+      { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+    );
+
+    return manipResult.uri;
+  };
+
+  // Replace the handleSave function in PhotoSelectorModal
+const handleSave = async () => {
+  setIsProcessing(true);
+  try {
+    const processedPhotos: (string | Photo)[] = [];
+
+    for (let i = 0; i < localPhotos.length; i++) {
+      const item = localPhotos[i];
+      const { photo, rotation } = item;
+      const uri = typeof photo === "string" ? photo : photo.url;
+
+      // If photo was rotated, we need to re-upload it
+      if (rotation !== 0) {
+        try {
+          // Rotate the image
+          const rotatedUri = await processAndRotateImage(uri, rotation);
+          
+          // Return as a string URI - this will trigger re-upload in SpotScreen
+          // SpotScreen will handle uploading and deleting the old version
+          processedPhotos.push(rotatedUri);
+        } catch (error) {
+          console.error("Failed to rotate photo:", error);
+          // Fallback: keep the original photo without rotation
+          if (spot?.status === "Approved" && typeof photo !== "string") {
+            processedPhotos.push({ ...photo, order: i + 1 });
+          } else {
+            processedPhotos.push(photo);
+          }
+        }
+      } else {
+        // No rotation - keep original photo
+        if (spot?.status === "Approved" && typeof photo !== "string") {
+          // Keep existing Photo object with updated order
+          processedPhotos.push({ ...photo, order: i + 1 });
+        } else {
+          processedPhotos.push(photo);
+        }
+      }
+    }
+
+    onChange(processedPhotos);
+    onClose();
+  } catch (error) {
+    console.error("Error processing photos:", error);
+    alert("Failed to process photos. Please try again.");
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   return (
     <Modal visible={visible} animationType="slide">
@@ -258,50 +274,45 @@ const handleSave = () => {
 
         <FlatList
           data={localPhotos}
-          keyExtractor={(item) => typeof item === "string" ? item : item.url}
-
+          keyExtractor={(item, index) => {
+            const photo = item.photo;
+            return typeof photo === "string"
+              ? `${photo}-${index}`
+              : photo.id?.toString() || photo.url;
+          }}
+          numColumns={2}
           contentContainerStyle={{ paddingVertical: 10 }}
           renderItem={({ item, index }) => {
-            const uri = typeof item === "string" ? item : item.url;
-            // const rotation = item.rotation;
-            const dimensions = photoDimensions[uri];
-            const aspectRatio = dimensions ? dimensions.width / dimensions.height : 4 / 3;
-
+            const uri = typeof item.photo === "string" ? item.photo : item.photo.url;
+            const rotation = item.rotation;
+            
             return (
-              <View style={[styles.imageContainer, { aspectRatio, flex: undefined, width: "100%" }]}>
+              <View style={styles.imageContainer}>
                 <Image
                   source={{ uri }}
                   style={[
                     styles.image,
+                    { transform: [{ rotate: `${rotation}deg` }] }
                   ]}
                   contentFit="cover"
                   cachePolicy="disk"
                 />
 
-                  {dimensions && (
-          <View style={{
-            position: "absolute",
-            bottom: 5,
-            left: 5,
-            backgroundColor: "rgba(0,0,0,0.6)",
-            paddingHorizontal: 5,
-            paddingVertical: 2,
-            borderRadius: 4,
-          }}>
-            <Text style={{ color: "white", fontSize: 12 }}>
-      {getNearestAspectRatio(dimensions.width, dimensions.height)}
-            </Text>
-          </View>
-        )}
-
                 <TouchableOpacity
                   style={styles.deleteButton}
-                  onPress={() => handleDeletePhoto(item)}
+                  onPress={() => handleDeletePhoto(item.photo)}
                   disabled={isProcessing}
                 >
                   <Text style={styles.buttonText}>×</Text>
                 </TouchableOpacity>
-
+                
+                <TouchableOpacity
+                  style={styles.rotateButton}
+                  onPress={() => handleRotatePhoto(index)}
+                  disabled={isProcessing}
+                >
+                  <Text style={styles.buttonText}>⟳</Text>
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.downloadButton}
                   onPress={async () => {handleDownloadPhoto(uri)}}
@@ -311,7 +322,25 @@ const handleSave = () => {
 
                 </TouchableOpacity>
 
-              
+                {rotation !== 0 && (
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: 5,
+                      left: 5,
+                      backgroundColor: "rgba(0,0,0,0.6)",
+                      paddingHorizontal: 6,
+                      paddingVertical: 2,
+                      borderRadius: 4,
+                    }}
+                  >
+                    <Text style={{ color: "white", fontSize: 10, fontWeight: "600" }}>
+                      {rotation}°
+                    </Text>
+                  </View>
+                )}
+
+                {spot?.status === "Approved" && (
                   <View
                     style={{
                       position: "absolute",
@@ -347,6 +376,7 @@ const handleSave = () => {
                       <Text style={{ color: "white", fontWeight: "600" }}>↓</Text>
                     </TouchableOpacity>
                   </View>
+                )}
               </View>
             );
           }}

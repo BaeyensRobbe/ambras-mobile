@@ -36,6 +36,7 @@ const SpotModal: React.FC<SpotModalProps> = ({ visible, mode, spot = null, onClo
       hasWaterChallenge: false,
       websiteLink: '',
       isFavorite: false,
+      uploadedBy: '',
     };
 
   const [formData, setFormData] = useState<formDataSpot | addSpotData | null>(initialData);
@@ -75,6 +76,7 @@ const SpotModal: React.FC<SpotModalProps> = ({ visible, mode, spot = null, onClo
     { key: "hasWaterChallenge", label: "Water challenges", type: "check" },
     { key: "isFavorite", label: "Favorite", type: "favorite" },
     { key: "websiteLink", label: "Website", type: "text" },
+    { key: "uploadedBy", label: "Uploaded By", type: "text" },
     { key: "lat", label: "Location", type: "location" },
     { key: "photos", label: "Photos (URLs)", type: "photos" },
   ];

@@ -12,25 +12,20 @@ export const addNewSpot = async (newSpot: addSpotData, refreshData: () => Promis
 
   try {
     const folderUUID = uuid.v4() as string;
-    const uploadedPhotos: Photo[] = [];
+    // const uploadedPhotos: Photo[] = [];
 
-    console.log("Adding new spot:", newSpot.photos);
+    const insertedSpot = await addSpot({ ...newSpot, photos: [] } as unknown as Spot);
+    if (!insertedSpot?.id) throw new Error("Failed to insert spot");
 
-    // Upload all photos
-    for (const photo of newSpot.photos) {
-      const photos = await uploadPhotosToSupabase({ ...newSpot, photos: [photo] }, folderUUID);
-      if (photos) uploadedPhotos.push(...photos);
-    }
-
-    // Save the spot with uploaded photos
-    const savedSpot = await addSpot({ ...newSpot, photos: uploadedPhotos} as Spot);
+    const uploadedPhotos = await uploadPhotosToSupabase(newSpot.photos, folderUUID, insertedSpot.id);
 
     // Insert photo records if needed
     if (uploadedPhotos.length > 0) {
       const photoRecords = uploadedPhotos.map((p) => ({
         url: p.url,
         uuid: folderUUID,
-        spotId: savedSpot.id,
+        spotId: insertedSpot.id,
+        order: p.order,
       }));
       const { error } = await insertPhotoRecords(photoRecords);
       if (error) throw new Error("Failed to insert photo records");
@@ -39,7 +34,7 @@ export const addNewSpot = async (newSpot: addSpotData, refreshData: () => Promis
     // Refresh spot list
     await refreshData();
 
-    return savedSpot;
+    return insertedSpot;
   } catch (error) {
     console.error("Error adding new spot:", error);
     return null;
@@ -74,10 +69,12 @@ export const approveSpot = async (spot: Spot, refreshData?: () => Promise<void>)
 
 export const saveSpotChanges = async (
   originalSpot: Spot,
-  updatedSpot: formDataSpot,
+  updatedSpot: Spot,
   refreshData: () => Promise<void>
 ) => {
   const isApproved = updatedSpot.status === "Approved";
+
+  console.log("Saving spot changes. Approved status:", updatedSpot.uploadedBy);
 
   const originalPhotoUrls = originalSpot.photos.map(p => p.url);
 
@@ -119,6 +116,8 @@ export const saveSpotChanges = async (
     finalPhotos = await uploadOrderedPhotosToR2({ ...(updatedSpot as Spot), photos: orderedPhotos });
     console.log("Final uploaded photos to R2:", finalPhotos);
   }
+
+  console.log("Uploaded by:", updatedSpot.uploadedBy);
 
   // 4. Save spot with proper order
   await updateSpot(updatedSpot.id, { ...(updatedSpot as Spot), photos: finalPhotos });

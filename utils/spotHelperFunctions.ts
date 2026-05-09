@@ -6,16 +6,49 @@ import * as ImageManipulator from "expo-image-manipulator";
 
 const apiUrl = API_BASE_URL.startsWith("http") ? API_BASE_URL : `https://${API_BASE_URL}`;
 
+async function convertToWebP(uri: string, quality = 0.85, maxWidth = 1920): Promise<string> {
+  const result = await ImageManipulator.manipulateAsync(
+    uri,
+    [{ resize: { width: maxWidth } }],
+    { compress: quality, format: ImageManipulator.SaveFormat.WEBP }
+  );
+  return result.uri;
+}
+
+async function fileToUint8Array(uri: string): Promise<Uint8Array> {
+  const base64 = await FileSystem.readAsStringAsync(uri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
 const optimizeImageForUpload = async (uri: string) => {
   const result = await ImageManipulator.manipulateAsync(
     uri,
-    [{ resize: { width: 1920 } }],
+    [{ resize: { width: 2560 } }],
     {
-      compress: 0.8,
+      compress: 0.9,
       format: ImageManipulator.SaveFormat.JPEG,
     }
   );
 
+  return result.uri;
+};
+
+const optimizeLowResImage = async (uri: string) => {
+  const result = await ImageManipulator.manipulateAsync(
+    uri,
+    [{ resize: { width: 640 } }], // low-res target
+    {
+      compress: 0.5, // stronger compression for low-res
+      format: ImageManipulator.SaveFormat.JPEG,
+    }
+  );
   return result.uri;
 };
 
@@ -70,7 +103,7 @@ export const fetchR2StorageUsage = async (): Promise<number> => {
 };
 
 // Insert photo records into Supabase and return inserted data
-export const insertPhotoRecords = async (photos: { url: string; uuid: string; spotId: number }[]) => {
+export const insertPhotoRecords = async (photos: { url: string; uuid: string; spotId: number, order: number | undefined }[]) => {
   if (photos.length === 0) {
     return { data: [], error: null };
   }
@@ -204,9 +237,27 @@ export const deletePhotosFromR2 = async (photos: Photo[]) => {
       })
       .filter(Boolean) as string[];
 
+    const pathsToDeleteLowRes = photos
+      .map(photo => {
+        try {
+          const url = new URL(photo.lowResUrl || "");
+          const key = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
+          return key;
+        } catch {
+          console.warn("Invalid low-res photo URL, skipping:", photo.lowResUrl);
+          return null;
+        }
+      })
+      .filter(Boolean) as string[];
+
+
     if (pathsToDelete.length === 0) {
       console.warn("No valid R2 paths found for deletion.");
       return;
+    }
+
+    if (pathsToDeleteLowRes.length === 0) {
+      console.warn("No valid low-res R2 paths found for deletion.");
     }
 
     console.log("Deleting R2 paths:", pathsToDelete);
@@ -222,6 +273,20 @@ export const deletePhotosFromR2 = async (photos: Photo[]) => {
 
       if (!res.ok) {
         console.error(`❌ Failed to delete ${key} (status ${res.status})`);
+      } else {
+      }
+    }
+
+    for (const key of pathsToDeleteLowRes) {
+      const extractedKey = extractKeyFromSignedUrl(key);
+      const res = await fetch(`${apiUrl}/r2/file-lowres`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: extractedKey }),
+      });
+
+      if (!res.ok) {
+        console.error(`❌ Failed to delete low-res ${key} (status ${res.status})`);
       } else {
       }
     }
@@ -246,80 +311,135 @@ const extractKeyFromSignedUrl = (urlOrPath: string): string => {
 export const uploadOrderedPhotosToR2 = async (spot: Spot): Promise<Photo[]> => {
   if (!spot.photos || spot.photos.length === 0) return [];
 
-  console.log("photos to upload to R2:", spot.photos);
-
   const folderName = spot.id;
   const uuid = spot.photos[0]?.uuid;
-
   const uploadedPhotos: Photo[] = [];
 
-  console.log(`Uploading ${spot.photos} photos to R2 for spot ${spot.id}...`);
-
+  // Loop over photos
   for (let index = 0; index < spot.photos.length; index++) {
     const photo = spot.photos[index];
-
-    console.log("order of photo: ", photo.order, "url :", photo.url);
 
     try {
     // ✅ Skip if photo is already on R2 with correct order
     if (photo.url.includes('.r2.dev') && photo.order === index + 1) {
-      console.log("Photo already on R2 with correct order, skipping upload:", photo);
       uploadedPhotos.push(photo);
       continue;
     }
       // Determine file path
       // 1. Get local file
-      console.log("Uploading photo:", photo);
-      console.log("Photo URL:", photo.url);
-      console.log("Photo order:", photo.order);
       const originalLocalPath =
         photo.url.startsWith("file://") || photo.url.startsWith("content://")
           ? photo.url
           : await downloadTempFile(photo.url);
 
+      const webPath = await convertToWebP(originalLocalPath);
+      const fileBytesWebP = await fileToUint8Array(webPath);
+
       // 2. Optimize image BEFORE upload
-      const optimizedPath = await optimizeImageForUpload(originalLocalPath);
+      // const optimizedPath = await optimizeImageForUpload(originalLocalPath);
+      // const optimizedPathLowRes = await optimizeLowResImage(originalLocalPath);
 
       // 3. Convert optimized image to base64
-      const base64 = await fileToBase64(optimizedPath);
+      // const base64 = await fileToBase64(optimizedPath);
+      // const base64LowRes = await fileToBase64(optimizedPathLowRes);
 
-      if (!base64) throw new Error(`File read failed for ${photo.url}`);
+      // if (!base64) throw new Error(`File read failed for ${photo.url}`);
 
-      const fileBytes = decodeBase64(base64);
-      if (!fileBytes || fileBytes.byteLength === 0) throw new Error(`File is empty: ${photo.url}`);
+      // const fileBytes = decodeBase64(base64);
+      // const fileBytesLowRes = decodeBase64(base64LowRes);
+      // if (!fileBytes || fileBytes.byteLength === 0) throw new Error(`File is empty: ${photo.url}`);
 
       // Determine file name and MIME type
-      const urlPath = new URL(photo.url).pathname;
-      const extension = urlPath.split(".").pop() || "jpg";
-      const fileName = `${String(index + 1).padStart(2, "0")}_${folderName}.${extension}`;
-      const mimeType = extension === "png" ? "image/png" : "image/jpeg";
+      // const urlPath = new URL(photo.url).pathname;
+      // const extension = urlPath.split(".").pop() || "jpg";
+      // const fileName = `${String(index + 1).padStart(2, "0")}_${folderName}.${extension}`;
+      // const mimeType = extension === "png" ? "image/png" : "image/jpeg";
 
-      // Get presigned URL
-      const signRes = await fetch(`${apiUrl}/r2/sign-upload`, {
+      const fileName = photo.id && photo.id !== 0 
+        ? `${photo.id}_1920.webp` 
+        : `${Date.now()}_${index}_1920.webp`;
+
+      const signWebpRes = await fetch(`${apiUrl}/r2/sign-upload-webp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileName, folderName, fileType: mimeType }),
+        body: JSON.stringify({ fileName, folderName, fileType: "image/webp" }),
       });
 
-      if (!signRes.ok) throw new Error(`Presign failed for ${fileName}`);
-      const { uploadUrl, publicUrl } = await signRes.json();
+      // Get presigned URL
+      // const signRes = await fetch(`${apiUrl}/r2/sign-upload`, {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ fileName, folderName, fileType: mimeType }),
+      // });
 
-      // Upload file
-      const uploadRes = await fetch(uploadUrl, {
+      // const signLowResRes = await fetch(`${apiUrl}/r2/sign-upload-lowres`, {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ fileName: `lowres_${fileName}`, folderName, fileType: mimeType }),
+      // });
+
+      if (!signWebpRes.ok) throw new Error(`Presign failed for ${fileName}`);
+      const { uploadUrl: uploadUrlWebP, publicUrl: publicUrlWebP } = await signWebpRes.json();
+
+      console.log("Uploading WebP to R2:", uploadUrlWebP);
+
+      const uploadWebPRes = await fetch(uploadUrlWebP, {
         method: "PUT",
-        headers: { "Content-Type": mimeType },
-        body: fileBytes,
+        headers: { "Content-Type": "image/webp" },
+        body: fileBytesWebP,
       });
 
-      if (!uploadRes.ok) throw new Error(`Upload failed for ${fileName}`);
+      if (!uploadWebPRes.ok) throw new Error(`Upload failed for ${fileName}`);
+
+      let fullQualityUrl = publicUrlWebP; // Default to WebP
+
+      if (spot.uploadedBy !== "AMBRAS") {
+        console.log("Uploading full quality for user spot...");
+        
+        const fullQualityBytes = await fileToUint8Array(originalLocalPath);
+        
+        // Determine original format
+        const urlPath = new URL(photo.url).pathname;
+        const extension = urlPath.split(".").pop() || "jpg";
+        const fullQualityFileName = `${String(index + 1).padStart(2, "0")}_${folderName}.${extension}`;
+        const mimeType = extension === "png" ? "image/png" : "image/jpeg";
+        
+        // Get presigned URL for full quality
+        const signFullRes = await fetch(`${apiUrl}/r2/sign-upload`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            fileName: fullQualityFileName, 
+            folderName, 
+            fileType: mimeType 
+          }),
+        });
+        
+        if (!signFullRes.ok) throw new Error(`Presign full quality failed`);
+        const { uploadUrl: uploadUrlFull, publicUrl: publicUrlFull } = await signFullRes.json();
+        
+        console.log("Uploading full quality to R2:", uploadUrlFull);
+        
+        // Upload full quality
+        const uploadFullRes = await fetch(uploadUrlFull, {
+          method: "PUT",
+          headers: { "Content-Type": mimeType },
+          body: fullQualityBytes,
+        });
+        
+        if (!uploadFullRes.ok) throw new Error(`Upload full quality failed`);
+        
+        fullQualityUrl = publicUrlFull;
+      }
 
       // Store uploaded photo with order
       uploadedPhotos.push({
         id: photo.id,
-        url: publicUrl,
+        url: fullQualityUrl,
         uuid,
         spotId: spot.id,
         order: photo.order, // store order explicitly
+        lowResUrl: publicUrlWebP,
       });
 
     } catch (err) {

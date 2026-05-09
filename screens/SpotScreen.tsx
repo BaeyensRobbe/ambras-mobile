@@ -223,32 +223,47 @@ const SpotScreen = () => {
         </View>
 
         {/* ✅ Search bar */}
-        <View style={{ marginVertical: 10 }}>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              backgroundColor: "#f0f0f0",
-              borderRadius: 8,
-              paddingHorizontal: 10,
-              height: 40,
-            }}
-          >
-            <Ionicons
-              name="search"
-              size={20}
-              color="#888"
-              style={{ marginRight: 8 }}
-            />
-            <TextInput
-              style={{ flex: 1, fontSize: 16 }}
-              placeholder="Search spots..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              editable={!uploadingPhotos}
-            />
-          </View>
-        </View>
+       <View style={{ flex: 1 }}>
+  {/* search bar */}
+  <View style={{ marginVertical: 10 }}>
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#f0f0f0",
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        height: 40,
+      }}
+    >
+      <Ionicons name="search" size={20} color="#888" style={{ marginRight: 8 }} />
+      <TextInput
+        style={{ flex: 1, fontSize: 16 }}
+        placeholder="Search spots..."
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        editable={!uploadingPhotos.active}
+      />
+    </View>
+  </View>
+
+  {/* list */}
+  <View style={{ flex: 1 }}>
+    <SpotsList
+      isVisible={!isFetching}
+      spots={filteredSpots}
+      mode={showSpotSuggestions ? "suggestions" : "approvals"}
+      onEdit={handleEdit}
+      onDelete={(id) => {
+        setSelectedSpot(spots.find((s) => s.id === id) || null);
+        setDeleteModalVisible(true);
+      }}
+      onApprove={handleOpenApproveModal}
+      onRefresh={onRefresh}
+    />
+  </View>
+</View>
+
 
         {uploadingPhotos.active && (
           <View style={{ padding: 10, alignItems: "center" }}>
@@ -258,20 +273,6 @@ const SpotScreen = () => {
           </View>
         )}
 
-
-        {/* ✅ Use filteredSpots instead of spots */}
-        <SpotsList
-          isVisible={!isFetching}
-          spots={filteredSpots}
-          mode={showSpotSuggestions ? "suggestions" : "approvals"}
-          onEdit={handleEdit}
-          onDelete={(id) => {
-            setSelectedSpot(spots.find((s) => s.id === id) || null);
-            setDeleteModalVisible(true);
-          }}
-          onApprove={handleOpenApproveModal}
-          onRefresh={onRefresh}
-        />
 
         <SpotModal
           visible={editModalVisible}

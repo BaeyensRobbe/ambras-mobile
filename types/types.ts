@@ -62,6 +62,7 @@ export type formDataSpot = {
   hasSwings: boolean;
   hasWaterChallenge: boolean;
   websiteLink?: string;
+  uploadedBy?: string;
   status: 'Pending' | 'Approved' | 'Rejected';
   notes?: string;
   lat: number;
@@ -79,6 +80,9 @@ export type editFormDataSpot = {
   isPkPark: boolean;
   hasFlipArea: boolean;
   hasSwings: boolean;
+  hasWaterChallenge: boolean;
+  websiteLink?: string;
+  uploadedBy?: string;
   status: 'Pending' | 'Approved' | 'Rejected';
   notes?: string;
   lat: number;
@@ -100,8 +104,9 @@ export type addSpotData = {
   websiteLink?: string;
   lat: number;
   lng: number;
-  photos: (Photo | String)[];
-  notes?: string;  
+  photos: Photo[];
+  notes?: string;
+  uploadedBy?: string;
 }
 
 export type CompleteSpot = {
@@ -119,6 +124,8 @@ export type CompleteSpot = {
   hasFlipArea: boolean;
   status: 'Pending' | 'Approved' | 'Rejected';
   notes?: string;
+  websiteLink?: string;
+  uploadedBy?: string;
   photos: Photo[];
   createdAt: string;
 };
@@ -162,24 +169,4 @@ export interface SpotSubmissionResult {
   success: boolean;
   spotId?: number;
   error?: Error;
-}
-
-export type Event = {
-  "id": 2,
-  "title": string,
-  "description": string,
-  "start_time": string,
-  "end_time": string,
-  "all_day": boolean,
-  "location": string,
-  "created_at": string,
-  "updated_at": string
-}
-
-export type Task = {
-  id: number;
-  title: string;
-  description?: string;
-  due_date: string; // ISO date string
-  completed: boolean;
 }

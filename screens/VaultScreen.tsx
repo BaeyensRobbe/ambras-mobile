@@ -75,21 +75,21 @@ const handleFetchImages = async (items: VaultItem[]) => {
 };
 
 
-useEffect(() => {
-  const fetchItemsAndImages = async () => {
-    try {
-      setLoading(true);
-      const items = await fetchVaultItems();
-      const foldersWithImages = await handleFetchImages(items);
-      setFolders(foldersWithImages);
-    } catch (err) {
-      console.error(err);
-      Alert.alert("Error loading vault items");
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchItemsAndImages = async () => {
+  try {
+    setLoading(true);
+    const items = await fetchVaultItems();
+    const foldersWithImages = await handleFetchImages(items);
+    setFolders(foldersWithImages);
+  } catch (err) {
+    console.error(err);
+    Alert.alert("Error loading vault items");
+  } finally {
+    setLoading(false);
+  }
+};
 
+useEffect(() => {
   fetchItemsAndImages();
 }, []);
 
@@ -231,7 +231,7 @@ useEffect(() => {
         renderItem={renderItem}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
         refreshing={loading}
-        onRefresh={loadItems}
+        onRefresh={fetchItemsAndImages}
       />
 
       <TouchableOpacity

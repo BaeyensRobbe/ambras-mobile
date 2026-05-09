@@ -270,7 +270,7 @@ const SpotmapScreen: React.FC = () => {
       </MapView>
 
       {overlayPos && selectedSpot && (
-        <View style={styles.overlay}>
+        <View style={[styles.overlay, { left: overlayPos.x - 75, top: overlayPos.y - 110 }]}>
           <TouchableOpacity onPress={() => setShowSpotDetails(true)}>
             <TouchableOpacity
               onPress={() => { setOverlayPos(null); setSelectedSpot(null); }}
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
   spotImage: { width: "100%", flex: 1 },
   distanceBadge: { position: "absolute", bottom: 8, right: 8, backgroundColor: "rgba(0,0,0,0.6)", paddingHorizontal: 6, paddingVertical: 3, borderRadius: 8 },
   distanceText: { color: "white", fontSize: 12 },
-  overlay: { zIndex: 100, position: "absolute", left: width / 2 - 75, top: height / 2 - 75, width: 150, backgroundColor: "white", padding: 8, borderRadius: 8, borderColor: ambrasGreen, borderWidth: 2 },
+  overlay: { zIndex: 100, position: "absolute", width: 150, backgroundColor: "white", padding: 8, borderRadius: 8, borderColor: ambrasGreen, borderWidth: 2 },
 });
 
 export default SpotmapScreen;

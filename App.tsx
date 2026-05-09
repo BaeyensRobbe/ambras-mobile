@@ -4,7 +4,6 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import DashboardScreen from "./screens/DashboardScreen";
-import CalendarScreen from "./screens/CalendarScreen";
 import SpotScreen from "./screens/SpotScreen";
 import VaultScreen from "./screens/VaultScreen";
 import SpotmapScreen from "./screens/SpotmapScreen";
@@ -30,7 +29,7 @@ export default function App() {
             let iconName: string = "home";
             if (route.name === "Dashboard") iconName = "stats-chart";
             else if (route.name === "Vault") iconName = "lock-closed";
-            else if (route.name === "Agenda") iconName = "calendar";
+
             else if (route.name === "Spotmap") iconName = "map";
             else if (route.name === "Spots") iconName = "pin";
             return <Ionicons name={iconName as any} size={size} color={color} />;
@@ -39,7 +38,7 @@ export default function App() {
       >
         <Tab.Screen name="Dashboard" component={DashboardScreen} />
         <Tab.Screen name="Vault" component={VaultScreen} />
-        <Tab.Screen name="Agenda" component={CalendarScreen} />
+
         <Tab.Screen name="Spotmap" component={SpotmapScreen} />
         <Tab.Screen name="Spots" component={SpotScreen} />
       </Tab.Navigator>
